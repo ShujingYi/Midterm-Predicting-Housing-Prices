@@ -55,16 +55,8 @@ sale <-
   st_read("data/studentData.geojson") %>%
   st_transform('ESRI:102286')
 
-Mecklenberg <- 
+nhoods <- 
   st_read("data/npa/npa.shp") %>%
-  st_transform('ESRI:102286')
-
-boston <- 
-  read.csv(file.path(root.dir,"/Chapter3_4/bostonHousePriceData_clean.csv"))
-
-boston.sf <- 
-  boston %>% 
-  st_as_sf(coords = c("Longitude", "Latitude"), crs = 4326, agr = "constant") %>%
   st_transform('ESRI:102286')
 
 
