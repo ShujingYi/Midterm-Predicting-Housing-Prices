@@ -1,0 +1,39 @@
+```{r setup_packages, warning = FALSE, message = FALSE}
+# Load Libraries
+
+library(tidyverse)
+library(tidycensus)
+library(sf)
+library(kableExtra)
+library(gridExtra)
+options(scipen=999)
+options(tigris_class = "sf")
+
+root.dir = "https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/DATA/"
+source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/functions.r")
+
+
+palette5 <- c("#f0f9e8","#bae4bc","#7bccc4","#43a2ca","#0868ac")
+```
+
+
+```{r}
+bikelanes <- st_read("data/bikelanes/BikeLanes.shp") #%>%
+              #st_transform(st_crs(tracts20)) 
+plot(bikelanes)
+```
+```{r}
+busstop <- st_read("data/cats_busstops/CATS_BusStops.shp") #%>%
+#st_transform(st_crs(tracts20))
+plot(busstop)
+```
+```{r}
+blue <- st_read("data/lynxblueline_station/LYNXBlueLine_Station.shp") #%>%
+#st_transform(st_crs(tracts20))
+gold <- st_read("data/lynxgoldline_station/LYNXGoldLine_Station.shp")
+red <- st_read("data/lynxredline_station/LYNXRedLine_Station.shp")
+silver <- st_read("data/lynxsilverline_station/LYNXSilverLine_Station.shp")
+
+
+```
+
