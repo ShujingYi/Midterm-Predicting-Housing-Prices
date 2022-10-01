@@ -16,16 +16,25 @@ source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-L
 palette5 <- c("#f0f9e8","#bae4bc","#7bccc4","#43a2ca","#0868ac")
 ```
 
+```{r}
+Mecklenberg <- 
+  st_read("data/npa/npa.shp") %>%
+  st_transform('ESRI:102286')
+```
+
+
 
 ```{r}
-bikelanes <- st_read("data/bikelanes/BikeLanes.shp") #%>%
-              #st_transform(st_crs(tracts20)) 
+bikelanes <- st_read("data/bikelanes/BikeLanes.shp") %>%
+              st_transform(st_crs(Mecklenberg)) 
 plot(bikelanes)
 ```
 ```{r}
 busstop <- st_read("data/cats_busstops/CATS_BusStops.shp") #%>%
 #st_transform(st_crs(tracts20))
-plot(busstop)
+ggplot() +
+  geom_sf(data = busstop) +
+  geom_sf(data=st_union(Mecklenberg),fill = "transparent", color = "grey10",size= 0.7)
 ```
 ```{r}
 blue <- st_read("data/lynxblueline_station/LYNXBlueLine_Station.shp") #%>%
@@ -33,7 +42,29 @@ blue <- st_read("data/lynxblueline_station/LYNXBlueLine_Station.shp") #%>%
 gold <- st_read("data/lynxgoldline_station/LYNXGoldLine_Station.shp")
 red <- st_read("data/lynxredline_station/LYNXRedLine_Station.shp")
 silver <- st_read("data/lynxsilverline_station/LYNXSilverLine_Station.shp")
+station <- 
+  st_join(blue,gold)
+```
+
+##Homeless Shelter
+
+```{r}
+homelessshelter <- st_read("data/homeless_shelters/Homeless_Shelters.shp") %>%
+              st_transform(st_crs(Mecklenberg)) 
+ggplot() +
+  geom_sf(data = homelessshelter, fill = "red") +
+  geom_sf(data=st_union(Mecklenberg),fill = "transparent", color = "grey10",size= 0.7)
 
 
+ggplot() + geom_sf(data=st_union(Mecklenberg), color = "grey10",size= 0.7) +
+  stat_density2d(data = data.frame(st_coordinates(homelessshelter)), 
+                 aes(X, Y, fill = ..level.., alpha = ..level..),
+                 size = 0.01, bins = 40, geom = 'polygon') +
+  scale_fill_gradient(low = "#25CB10", high = "#FA7800", 
+                      breaks=c(0.000000003,0.00000003),
+                      labels=c("Minimum","Maximum"), name = "Density") +
+  scale_alpha(range = c(0.00, 0.35), guide = FALSE) +
+  labs(title = "Density of Aggravated Assaults, Boston") +
+  mapTheme()
 ```
 
