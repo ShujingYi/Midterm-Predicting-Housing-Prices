@@ -25,6 +25,7 @@ library(ggstance) # to support jtools plots
 library(ggpubr)    # plotting R^2 value on ggplot point scatter
 library(broom.mixed) # needed for effects plots
 
+
 # functions and data directory
 root.dir = "https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/DATA/"
 
@@ -60,7 +61,7 @@ ggplot() +
   scale_colour_manual(values = palette5,
                    labels=qBr(sale,"price"),
                    name="Quintile\nBreaks") +
-  labs(title="Price Per Square Foot, Mecklenberg") +
+  labs(title="Home Price, Mecklenberg") +
   mapTheme()
 ```
 
@@ -264,7 +265,7 @@ ggplot() +
 
 st_drop_geometry(salegroup) %>% 
   mutate(age = 2022 - yearbuilt) %>%
-  dplyr::select(price, age, heatedarea, bedrooms,homelessshelter_nn1,park_nn1,park_nn3,landfill,flood100y,school_nn1,school_nn2,school_nn3,bus_nn1,station_nn1) %>%
+  dplyr::select(price, age, heatedarea, fullbaths, bedrooms,homelessshelter_nn1,park_nn1,park_nn3,landfill,flood100y,school_nn1,school_nn2,school_nn3,bus_nn1,station_nn1) %>%
   filter(price <= 1000000, age<500, bedrooms<20) %>%
   gather(Variable, Value, -price) %>% 
   
@@ -278,5 +279,30 @@ st_drop_geometry(salegroup) %>%
 
 
 These variables look weird: Park_nn3, Floodplain, station_nn123,bus,school_nn12
+```{r}
+salegroup %>% 
+  dplyr::select(Price, descbuildi, storyheigh, aheatingty, heatedfuel,actype,extwall,foundation, bldggrade,
+                sale_year) %>%
+  filter(price <= 1000000, age<500, bedrooms<20) %>%
+  gather(Variable, Value, -price) %>% 
+   ggplot(aes(Value, price)) +
+     geom_bar(position = "dodge", stat = "summary", fun.y = "mean") +
+     facet_wrap(~Variable, ncol = 1, scales = "free") +
+     labs(title = "Price as a function of\ncategorical variables", y = "Mean_Price") +
+     plotTheme() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+numericVars <- 
+  select_if(st_drop_geometry(salegroup), is.numeric) %>% na.omit()
+
+ggcorrplot(
+  round(cor(numericVars), 1), 
+  p.mat = cor_pmat(numericVars),
+  colors = c("#25CB10", "white", "#FA7800"),
+  type="lower",
+  insig = "blank") +  
+    labs(title = "Correlation across numeric variables") 
+```
 
 
