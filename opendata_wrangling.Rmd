@@ -281,7 +281,7 @@ st_drop_geometry(salegroup) %>%
 These variables look weird: Park_nn3, Floodplain, station_nn123,bus,school_nn12
 ```{r}
 salegroup %>% 
-  dplyr::select(Price, descbuildi, storyheigh, aheatingty, heatedfuel,actype,extwall,foundation, bldggrade,
+  dplyr::select(price, descbuildi, storyheigh, aheatingty, heatedfuel,actype,extwall,foundation, bldggrade,
                 sale_year) %>%
   filter(price <= 1000000, age<500, bedrooms<20) %>%
   gather(Variable, Value, -price) %>% 
@@ -304,5 +304,34 @@ ggcorrplot(
   insig = "blank") +  
     labs(title = "Correlation across numeric variables") 
 ```
+```{r}
+AreaReg <- lm(price ~ heatedarea, data = salegroup)
 
+summary(AreaReg)
+```
+```{r}
+reg1 <- lm(price ~ ., data = st_drop_geometry(salegroup) %>% 
+                                 dplyr::select(price, heatedarea, bedrooms, 
+                                               age, fullbaths, halfbaths,
+                                               numfirepla,park_nn3,
+                                               landfill))
+summary(reg1)
+```
+
+```{r}
+inTrain <- createDataPartition(
+              y = paste(salegroup$storyheigh.cat, salegroup$heatedfuel, salegroup$actype), 
+              p = .60, list = FALSE)
+Mecklenberg.training <- salegroup[inTrain,] 
+Mecklenberg.test <- salegroup[-inTrain,]  
+```
+
+```{r}
+reg.training <- lm(price ~ ., data = st_drop_geometry(Mecklenberg.training) %>% 
+                                 dplyr::select(price, heatedarea, bedrooms, 
+                                               age, fullbaths, halfbaths,
+                                               numfirepla,park_nn3,
+                                               landfill))
+summary(reg1)
+```
 
