@@ -10,6 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 # Load some libraries
 library(tidyverse)
 library(raster)
+library(tidycensus)
 library(sf)
 library(spdep)
 library(caret)
@@ -319,10 +320,13 @@ ggcorrplot(
 ```
 
 ##categorical change
+
+### Age
+
 ```{r}
-salegroup <-salegroup %>% 
-  filter(age <= 500) %>%
-histogram(salegroup$age)
+s <-salegroup %>% 
+  filter(age <= 200) 
+histogram(s$age,breaks=40)
 ```
 
 
@@ -330,26 +334,86 @@ histogram(salegroup$age)
 salegroup <- 
   salegroup %>%
   mutate(age.cat = case_when(
-                  age >= 0 & age < 3  ~ "Up to 2 Floors",
-                  NUM_FLOORS >= 3 & NUM_FLOORS < 4  ~ "3 Floors",
-                  NUM_FLOORS > 4                    ~ "4+ Floors"))
+                  age >= 0 & age <15  ~ "Up to 15yrs",
+                  age >= 15 & age < 50  ~ "15-50yrs",
+                  age >= 50 & age < 75  ~ "50-75yrs",                   
+                  age >= 75  ~ "75+yrs"),)
+```
+
+### Story height
+```{r}
+glimpse(s$storyheigh)
+
+
+salegroup$story.cat <- recode(salegroup$storyheigh,"1.0 STORY"= "1story","1 STORY"= "1story", "1.5 STORY" = "2story", "2.0 STORY" = "2story","BI-LEVEL"="2story","SPLIT LEVEL"="2story","2.5 STORY"="3story","3.0 STORY"="3story","CAPE COD"="other","RANCH W/BSMT"="other")
+
+```
+
+
+## Census Tract
+```{r}
+census_api_key("a78f5d0c0fd577cd3f16136b5a87d6ecdb62ffba", overwrite = TRUE)
+
+tracts <-  
+  get_acs(geography = "tract",
+          variables = c("B25026_001E","B02001_002E",
+                        "B15001_050E","B15001_009E",
+                        "B19013_001E", "B25058_001E",
+                        "B06012_002E"), 
+          year=2020, state="NC",
+          county="Mecklenburg County", geometry=TRUE) %>% 
+  st_transform('ESRI:102286')
+
+```
+```{r}
+tracts <- 
+  tracts %>%
+  dplyr::select( -NAME, -moe) %>%
+  spread(variable, estimate) %>%
+  rename(TotalPop = B25026_001, 
+         Whites = B02001_002,
+         FemaleBachelors = B15001_050, 
+         MaleBachelors = B15001_009,
+         MedHHInc = B19013_001, 
+         MedRent = B25058_001,
+         TotalPoverty = B06012_002)
+
+tracts <- 
+  tracts %>%
+  mutate(pctWhite = ifelse(TotalPop > 0, Whites / TotalPop, 0),
+         pctBachelors = ifelse(TotalPop > 0, ((FemaleBachelors + MaleBachelors) / TotalPop), 0),
+         pctPoverty = ifelse(TotalPop > 0, TotalPoverty / TotalPop, 0)) %>%
+  dplyr::select(-Whites,-FemaleBachelors,-MaleBachelors,-TotalPoverty)
+```
+
+```{r}
+ggplot()+
+  geom_sf(data = tracts, fill = "transparent", color = "black")+
+  geom_sf(data=salegroup, 
+          show.legend = "point", size= 0.5) +
+  labs(title = "Mecklenburg Census Tracts") +
+  theme(plot.title = element_text(size=22))
+```
+###Intersection
+
+```{r}
+salegroup<-st_intersection(salegroup,tracts)
 ```
 
 
 
 ##regression model
 
-```{r}
-AreaReg <- lm(price ~ heatedarea, data = salegroup)
+Outer:homelessshelter_nn1,park_nn1,park_nn3,landfill,flood100y,school_nn1,school_nn2,school_nn3,bus_nn1,station_nn1
+Census:TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc,MedRent
 
-summary(AreaReg)
-```
+
 ```{r}
 reg1 <- lm(price ~ ., data = st_drop_geometry(salegroup) %>% 
                                  dplyr::select(price, heatedarea, bedrooms, 
-                                               age, fullbaths, halfbaths,
-                                               numfirepla,park_nn3,
-                                               landfill))
+                                               age.cat,story.cat,fullbaths, halfbaths,
+                                               numfirepla,foundation, park_nn1,homelessshelter_nn1,landfill,flood100y,school_nn1,bus_nn1,station_nn1,bldggrade,
+                                               TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc))
 summary(reg1)
 ```
 
@@ -364,9 +428,9 @@ Mecklenberg.test <- salegroup[-inTrain,]
 ```{r}
 reg.training <- lm(price ~ ., data = st_drop_geometry(Mecklenberg.training) %>% 
                                  dplyr::select(price, heatedarea, bedrooms, 
-                                               age, fullbaths, halfbaths,
-                                               numfirepla,park_nn3,
+                                               age.cat, fullbaths, halfbaths,
+                                               park_nn3,
                                                landfill))
-summary(reg1)
+summary(reg.training)
 ```
 
