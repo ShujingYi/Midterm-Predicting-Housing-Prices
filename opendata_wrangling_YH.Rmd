@@ -428,9 +428,33 @@ Mecklenberg.test <- salegroup[-inTrain,]
 ```{r}
 reg.training <- lm(price ~ ., data = st_drop_geometry(Mecklenberg.training) %>% 
                                  dplyr::select(price, heatedarea, bedrooms, 
-                                               age.cat, fullbaths, halfbaths,
-                                               park_nn3,
-                                               landfill))
+                                               age.cat,story.cat,fullbaths, halfbaths,
+                                               numfirepla,foundation, park_nn1,homelessshelter_nn1,landfill,flood100y,school_nn1,bus_nn1,station_nn1,bldggrade,
+                                               TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc))
 summary(reg.training)
 ```
 
+##Test Set 
+
+```{r}
+Mecklenberg.test <-
+  Mecklenberg.test %>%
+  mutate(Regression = "Baseline Regression",
+         SalePrice.Predict = predict(reg.training, Mecklenberg.test),
+         SalePrice.Error = SalePrice.Predict - price,
+         SalePrice.AbsError = abs(SalePrice.Predict - price),
+         SalePrice.APE = (abs(SalePrice.Predict - price)) / SalePrice.Predict)%>%
+  filter(price < 5000000) 
+```
+
+```{r}
+ggplot() +
+  geom_sf(data=Mecklenberg,fill = "grey40", color = "grey10",size= 0.7)+
+  geom_sf(data = Mecklenberg.test, aes(colour = q5(as.numeric(SalePrice.AbsError))), 
+          show.legend = "point", size = .75) +
+  scale_colour_manual(values = palette5,
+                   labels=qBr(sale,"price"),
+                   name="Quintile\nBreaks") +
+  labs(title="Home Price Absolute Error, Mecklenberg") +
+  mapTheme()
+```
