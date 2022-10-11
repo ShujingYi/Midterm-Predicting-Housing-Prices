@@ -413,7 +413,7 @@ Census:TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc,MedRent
 ```{r}
 reg1 <- lm(price ~ ., data = st_drop_geometry(salegroup) %>% 
                                  dplyr::select(price, heatedarea, bedrooms, 
-                                               age.cat,story.cat,fullbaths, halfbaths,
+                                               age.cat,storyheigh,fullbaths, halfbaths,
                                                numfirepla,foundation, park_nn1,homelessshelter_nn1,landfill,flood100y,school_nn1,bus_nn1,station_nn1,bldggrade,
                                                TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc))
 summary(reg1)
@@ -491,17 +491,15 @@ dplyr::select(reg.cv$resample, -Resample) %>%
   left_join(gather(reg.cv$results[2:4], metric, mean)) %>%
   ggplot(aes(value)) + 
     geom_histogram(bins=35, fill = "#FF006A") +
-    facet_wrap(~metric) +
+    facet_wrap(~metric,scales = "free_x") +
     geom_vline(aes(xintercept = mean), colour = "#981FAC", linetype = 3, size = 1.5) +
-    scale_x_continuous(limits = c(0, 1)) +
+
     labs(x="Goodness of Fit", y="Count", title="CV Goodness of Fit Metrics",
          subtitle = "Across-fold mean reprented as dotted lines")
 
 ```
 
 #Spatial Correlation of error
-
-
 
 
 ```{r}
@@ -599,9 +597,52 @@ Mecklenberg.test.nhood <-
 ```{r}
 bothRegressions <- 
   rbind(
-    dplyr::select(Mecklenberg.test, starts_with("price"), Regression, npa) %>%
-      mutate(lagPriceError = lag.listw(spatialWeights.test, SalePrice.Error)),
-    dplyr::select(Mecklenberg.test.nhood, starts_with("price"), Regression, npa) %>%
-      mutate(lagPriceError = lag.listw(spatialWeights.test, SalePrice.Error)))   
+    dplyr::select(Mecklenberg.test, starts_with("price"), Regression, npa, SalePrice.Predict,SalePrice.Error,SalePrice.AbsError,SalePrice.APE) ,
+    dplyr::select(Mecklenberg.test.nhood, starts_with("price"), Regression, npa, SalePrice.Predict, SalePrice.Error,SalePrice.AbsError,SalePrice.APE))   
+```
+
+```{r}
+
+st_drop_geometry(bothRegressions) %>% 
+   mutate_if(is.numeric, ~ifelse(abs(.) == Inf,NA,.))%>% 
+  gather(Variable, Value, -Regression, -npa) %>%
+  filter(Variable == "SalePrice.AbsError" | Variable == "SalePrice.APE") %>%
+  group_by(Regression, Variable) %>%
+    summarize(meanValue = mean(Value, na.rm = T)) %>%
+    spread(Variable, meanValue) %>%
+    kable()
+```
+```{r}
+bothRegressions %>%
+  dplyr::select(SalePrice.Predict, price, Regression) %>%
+    ggplot(aes(price, SalePrice.Predict)) +
+  geom_point() +
+  stat_smooth(aes(price, price), 
+             method = "lm", se = FALSE, size = 1, colour="#FA7800") + 
+  stat_smooth(aes(SalePrice.Predict, price), 
+              method = "lm", se = FALSE, size = 1, colour="#25CB10") +
+  facet_wrap(~Regression) +
+  labs(title="Predicted sale price as a function of observed price",
+       subtitle="Orange line represents a perfect prediction; Green line represents prediction") +
+  plotTheme()
+
+
+```
+
+```{r}
+st_drop_geometry(bothRegressions) %>%
+  group_by(Regression, npa) %>%
+  summarize(mean.MAPE = mean(SalePrice.APE, na.rm = T)) %>%
+  ungroup() %>% 
+  left_join(nhoods) %>%
+    st_sf() %>%
+    ggplot() + 
+      geom_sf(aes(fill = mean.MAPE)) +
+      geom_sf(data = bothRegressions, colour = "black", size = .5) +
+      facet_wrap(~Regression) +
+      scale_fill_gradient(low = palette5[1], high = palette5[5],
+                          name = "MAPE") +
+      labs(title = "Mean test set MAPE by neighborhood") +
+      mapTheme()
 ```
 
