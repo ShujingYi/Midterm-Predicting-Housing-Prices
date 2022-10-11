@@ -276,6 +276,19 @@ st_drop_geometry(salegroup) %>%
      plotTheme()
 
 ```
+```{r}
+salegroup <- 
+  salegroup %>%
+  mutate(age = 2022 - yearbuilt)
+```
+
+```{r}
+salegroup %>% 
+  dplyr::select(price, descbuildi, storyheigh, aheatingty, heatedfuel,actype,extwall,foundation, bldggrade,
+                sale_year) %>%
+  filter(price <= 1000000, age<500, bedrooms<20) %>%
+  gather(Variable, Value, -price) 
+```
 
 
 These variables look weird: Park_nn3, Floodplain, station_nn123,bus,school_nn12
@@ -312,7 +325,7 @@ summary(AreaReg)
 ```{r}
 reg1 <- lm(price ~ ., data = st_drop_geometry(salegroup) %>% 
                                  dplyr::select(price, heatedarea, bedrooms, 
-                                               age, fullbaths, halfbaths,
+                                               yearbuilt, fullbaths, halfbaths,
                                                numfirepla,park_nn3,
                                                landfill))
 summary(reg1)
@@ -329,9 +342,10 @@ Mecklenberg.test <- salegroup[-inTrain,]
 ```{r}
 reg.training <- lm(price ~ ., data = st_drop_geometry(Mecklenberg.training) %>% 
                                  dplyr::select(price, heatedarea, bedrooms, 
-                                               age, fullbaths, halfbaths,
+                                                fullbaths, halfbaths,yearbuilt,
                                                numfirepla,park_nn3,
                                                landfill))
 summary(reg1)
 ```
+
 

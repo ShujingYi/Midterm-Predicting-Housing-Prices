@@ -1,0 +1,607 @@
+
+
+```{r setup, include=FALSE}
+
+# You can set some global options for knitting chunks
+
+knitr::opts_chunk$set(echo = TRUE)
+
+# Load some libraries
+library(tidyverse)
+library(raster)
+library(tidycensus)
+library(sf)
+library(spdep)
+library(caret)
+library(ckanr)
+library(FNN)
+library(grid)
+library(gridExtra)
+library(ggcorrplot) # plot correlation plot
+library(corrr)      # another way to plot correlation plot
+library(kableExtra)
+library(jtools)     # for regression model plots
+library(ggstance) # to support jtools plots
+library(ggpubr)    # plotting R^2 value on ggplot point scatter
+library(broom.mixed) # needed for effects plots
+
+
+# functions and data directory
+root.dir = "https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/DATA/"
+
+source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/functions.r")
+
+palette5 <- c("#25CB10", "#5AB60C", "#8FA108",   "#C48C04", "#FA7800")
+```
+
+
+## Data Wrangling
+
+See if you can change the chunk options to get rid of the text outputs
+
+```{r read_data}
+sale <- 
+  st_read("data/studentData.geojson") %>%
+  st_transform('ESRI:102286')
+```
+
+
+
+```{r}
+Mecklenberg <- 
+  st_read("data/npa/npa.shp") %>%
+  st_transform('ESRI:102286')
+```
+
+```{r}
+ggplot() +
+  geom_sf(data=Mecklenberg,fill = "grey40", color = "grey10",size= 0.7)+
+  geom_sf(data = sale, aes(colour = q5(as.numeric(price))), 
+          show.legend = "point", size = .75) +
+  scale_colour_manual(values = palette5,
+                   labels=qBr(sale,"price"),
+                   name="Quintile\nBreaks") +
+  labs(title="Home Price, Mecklenberg") +
+  mapTheme()
+```
+
+
+
+
+##bike lanes
+
+```{r}
+bikelanes <- st_read("data/bikelanes/BikeLanes.shp") %>%
+              st_transform(st_crs(Mecklenberg)) 
+plot(bikelanes)
+```
+```{r}
+busstop <- st_read("data/cats_busstops/CATS_BusStops.shp") #%>%
+#st_transform(st_crs(tracts20))
+ggplot() +
+  geom_sf(data = busstop) +
+  geom_sf(data=st_union(Mecklenberg),fill = "transparent", color = "grey10",size= 0.7)
+```
+```{r}
+sale <-
+  sale %>% 
+    mutate(bus_nn1 = nn_function(st_coordinates(sale), st_coordinates(busstop), 1))
+
+```
+
+##Station
+
+```{r}
+station<- st_read("data/station_merge/station_merge.shp") 
+ggplot() +
+  geom_sf(data = station) +
+  geom_sf(data=st_union(Mecklenberg),fill = "transparent", color = "grey10",size= 0.7)
+
+```
+```{r}
+sale <-
+  sale %>% 
+    mutate(station_nn1 = nn_function(st_coordinates(sale), st_coordinates(station), 1))
+
+```
+
+
+
+##park
+```{r}
+park <- st_read("data/park_locations/Park_Locations.shp") %>%
+              st_transform(st_crs(Mecklenberg)) 
+
+
+ggplot() + geom_sf(data=st_union(Mecklenberg), color = "grey10",size= 0.7) +
+  stat_density2d(data = data.frame(st_coordinates(park)), 
+                 aes(X, Y, fill = ..level.., alpha = ..level..),
+                 size = 0.01, bins = 40, geom = 'polygon') +
+  scale_fill_gradient(low = "#25CB10", high = "#FA7800", 
+                      breaks=c(0.000000003,0.00000003),
+                      labels=c("Minimum","Maximum"), name = "Density") +
+  scale_alpha(range = c(0.00, 0.35), guide = FALSE) +
+  labs(title = "Density of Park, Mecklenberg") +
+  mapTheme()
+```
+
+Calculate distance to the nearest park as park_nn1:
+
+```{r}
+sale <-
+  sale %>% 
+    mutate(park_nn1 = nn_function(st_coordinates(sale), st_coordinates(park), 1),
+           park_nn3 = nn_function(st_coordinates(sale), st_coordinates(park), 3))
+
+```
+
+#Landfill
+```{r}
+landfill <- st_read("data/landfills/Landfills.shp") %>%
+              st_transform(st_crs(Mecklenberg)) 
+
+
+ggplot() +
+  geom_sf(data=Mecklenberg,fill = "white", color = "grey60",size= 0.5)+  
+  geom_sf(data = landfill, fill = "red") +
+   labs(title = "Landfill in Mecklenberg") 
+
+```
+```{r}
+sale <-
+  sale %>% 
+    mutate(landfill = nn_function(st_coordinates(sale), st_coordinates(st_centroid(landfill)), 1))
+```
+
+
+
+##School
+
+```{r}
+school_public <- st_read("data/cms_schools/CMS_Schools.shp") %>%
+              st_transform(st_crs(Mecklenberg)) %>%
+  dplyr::select(city, address)
+
+school_charter <- st_read("data/schools_charter/Schools_Charter.shp") %>%
+              st_transform(st_crs(Mecklenberg)) %>%
+    dplyr::select(city, address)
+
+
+school<-rbind(school_public,school_charter)
+
+ggplot()+
+    geom_sf(data=Mecklenberg,fill = "white", color = "grey60",size= 0.5)+  
+  geom_sf(data=school)+
+    labs(title = "Public Schools in Mecklenberg") 
+```
+```{r}
+sale <-
+  sale %>% 
+    mutate(school_nn1 = nn_function(st_coordinates(sale), st_coordinates(school), 1),
+   school_nn2 = nn_function(st_coordinates(sale), st_coordinates(school), 2),   
+   school_nn3 = nn_function(st_coordinates(sale), st_coordinates(school), 3))
+```
+
+
+##Homeless Shelter
+
+```{r}
+homelessshelter <- st_read("data/homeless_shelters/Homeless_Shelters.shp") %>%
+              st_transform(st_crs(Mecklenberg)) 
+ggplot() +
+  geom_sf(data = homelessshelter, fill = "red") +
+  geom_sf(data=st_union(Mecklenberg),fill = "transparent", color = "grey10",size= 0.7)
+
+
+ggplot() + geom_sf(data=st_union(Mecklenberg), color = "grey10",size= 0.7) +
+  stat_density2d(data = data.frame(st_coordinates(homelessshelter)), 
+                 aes(X, Y, fill = ..level.., alpha = ..level..),
+                 size = 0.01, bins = 40, geom = 'polygon') +
+  scale_fill_gradient(low = "#25CB10", high = "#FA7800", 
+                      breaks=c(0.000000003,0.00000003),
+                      labels=c("Minimum","Maximum"), name = "Density") +
+  scale_alpha(range = c(0.00, 0.35), guide = FALSE) +
+  labs(title = "Density of Aggravated Assaults, Boston") +
+  mapTheme()
+
+
+sale <-
+  sale %>% 
+    mutate(homelessshelter_nn1 = nn_function(st_coordinates(sale), st_coordinates(homelessshelter), 1))
+```
+
+
+
+##Floodplain
+
+```{r}
+flood100y <- st_read("data/femaexisting_100yr_floodplain/FEMAExisting_100yr_Floodplain.shp") %>%
+              st_transform(st_crs(Mecklenberg)) 
+ggplot() +
+  geom_sf(data=Mecklenberg,fill = "white", color = "grey60",size= 0.5)+  
+  geom_sf(data = flood100y, fill = "dark blue",color="transparent") +
+  labs(title = "100 year Floodplain in Mecklenberg") 
+```
+
+```{r}
+salegroup <- 
+  rbind(
+    sale[flood100y,] %>%
+      st_drop_geometry() %>%
+      left_join(sale) %>%
+      st_sf() %>%
+      mutate(flood100y = 1),
+   sale[flood100y, op = st_disjoint] %>%
+      st_drop_geometry() %>%
+      left_join(sale) %>%
+      st_sf() %>%
+      mutate(flood100y = 0))
+```
+
+Map the houses within floodplain (flood100y == 1)
+```{r}
+floodpt<-
+  salegroup %>%
+  filter(flood100y == 1)
+
+ggplot() +
+  geom_sf(data=Mecklenberg,fill = "white", color = "grey60",size= 0.5)+  
+  geom_sf(data = flood100y, fill = "dark blue",color="transparent") +
+     geom_sf(data = salegroup,  col = "grey80",
+          show.legend = "point", size = .2) +
+  geom_sf(data = floodpt, col = "red",
+          show.legend = "point", size = .7) +
+  labs(title = "Houses within 100 year Floodplain in Mecklenberg") 
+
+
+```
+Age calculation
+
+```{r}
+salegroup <- 
+  salegroup %>%
+  mutate(age = 2022 - yearbuilt)
+```
+
+
+
+##Test
+
+
+```{r fig.height=10, fig.width=12}
+
+st_drop_geometry(salegroup) %>% 
+  dplyr::select(price, age, heatedarea, fullbaths, bedrooms,homelessshelter_nn1,park_nn1,park_nn3,landfill,flood100y,school_nn1,school_nn2,school_nn3,bus_nn1,station_nn1) %>%
+  filter(price <= 1000000, age<500, bedrooms<20) %>%
+  gather(Variable, Value, -price) %>% 
+  
+   ggplot(aes(Value, price)) +
+     geom_point(size = .5) + geom_smooth(method = "lm", se=F, colour = "#FA7800") +
+     facet_wrap(~Variable, ncol = 4, scales = "free") +
+     labs(title = "Price as a function of continuous variables") +
+     plotTheme()
+
+```
+
+
+
+These variables look weird: Park_nn3, Floodplain, station_nn123,bus,school_nn12
+
+```{r}
+table(salegroup$bedrooms)
+```
+
+
+```{r fig.height=10, fig.width=12}
+st_drop_geometry(salegroup) %>% 
+  dplyr::select(price, descbuildi, storyheigh, aheatingty, heatedfuel,actype,extwall,foundation, bldggrade,
+                sale_year) %>%
+  filter(price <= 1000000) %>%
+  gather(Variable, Value, -price) %>% 
+   ggplot(aes(Value, price)) +
+     geom_bar(position = "dodge", stat = "summary", fun.y = "mean") +
+     facet_wrap(~Variable, ncol = 4, scales = "free") +
+     labs(title = "Price as a function of\ncategorical variables", y = "Mean_Price") +
+     plotTheme() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+numericVars <- 
+  select_if(st_drop_geometry(salegroup), is.numeric) %>% na.omit()
+
+ggcorrplot(
+  round(cor(numericVars), 1), 
+  p.mat = cor_pmat(numericVars),
+  colors = c("#25CB10", "white", "#FA7800"),
+  type="lower",
+  insig = "blank") +  
+    labs(title = "Correlation across numeric variables") 
+```
+
+##categorical change
+
+### Age
+
+```{r}
+s <-salegroup %>% 
+  filter(age <= 200) 
+histogram(s$age,breaks=40)
+```
+
+
+```{r}
+salegroup <- 
+  salegroup %>%
+  mutate(age.cat = case_when(
+                  age >= 0 & age <15  ~ "Up to 15yrs",
+                  age >= 15 & age < 50  ~ "15-50yrs",
+                  age >= 50 & age < 75  ~ "50-75yrs",                   
+                  age >= 75  ~ "75+yrs"),)
+```
+
+### Story height
+```{r}
+glimpse(s$storyheigh)
+
+
+salegroup$story.cat <- recode(salegroup$storyheigh,"1.0 STORY"= "1story","1 STORY"= "1story", "1.5 STORY" = "2story", "2.0 STORY" = "2story","BI-LEVEL"="2story","SPLIT LEVEL"="2story","2.5 STORY"="3story","3.0 STORY"="3story","CAPE COD"="other","RANCH W/BSMT"="other")
+
+```
+
+
+## Census Tract
+```{r}
+census_api_key("a78f5d0c0fd577cd3f16136b5a87d6ecdb62ffba", overwrite = TRUE)
+
+tracts <-  
+  get_acs(geography = "tract",
+          variables = c("B25026_001E","B02001_002E",
+                        "B15001_050E","B15001_009E",
+                        "B19013_001E", "B25058_001E",
+                        "B06012_002E"), 
+          year=2020, state="NC",
+          county="Mecklenburg County", geometry=TRUE) %>% 
+  st_transform('ESRI:102286')
+
+```
+```{r}
+tracts <- 
+  tracts %>%
+  dplyr::select( -NAME, -moe) %>%
+  spread(variable, estimate) %>%
+  rename(TotalPop = B25026_001, 
+         Whites = B02001_002,
+         FemaleBachelors = B15001_050, 
+         MaleBachelors = B15001_009,
+         MedHHInc = B19013_001, 
+         MedRent = B25058_001,
+         TotalPoverty = B06012_002)
+
+tracts <- 
+  tracts %>%
+  mutate(pctWhite = ifelse(TotalPop > 0, Whites / TotalPop, 0),
+         pctBachelors = ifelse(TotalPop > 0, ((FemaleBachelors + MaleBachelors) / TotalPop), 0),
+         pctPoverty = ifelse(TotalPop > 0, TotalPoverty / TotalPop, 0)) %>%
+  dplyr::select(-Whites,-FemaleBachelors,-MaleBachelors,-TotalPoverty)
+```
+
+```{r}
+ggplot()+
+  geom_sf(data = tracts, fill = "transparent", color = "black")+
+  geom_sf(data=salegroup, 
+          show.legend = "point", size= 0.5) +
+  labs(title = "Mecklenburg Census Tracts") +
+  theme(plot.title = element_text(size=22))
+```
+###Intersection
+
+```{r}
+salegroup<-st_intersection(salegroup,tracts)
+
+```
+
+```{r}
+salegroup<-st_intersection(salegroup,Mecklenberg)
+```
+
+##regression model
+
+Outer:homelessshelter_nn1,park_nn1,park_nn3,landfill,flood100y,school_nn1,school_nn2,school_nn3,bus_nn1,station_nn1
+Census:TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc,MedRent
+
+
+```{r}
+reg1 <- lm(price ~ ., data = st_drop_geometry(salegroup) %>% 
+                                 dplyr::select(price, heatedarea, bedrooms, 
+                                               age.cat,story.cat,fullbaths, halfbaths,
+                                               numfirepla,foundation, park_nn1,homelessshelter_nn1,landfill,flood100y,school_nn1,bus_nn1,station_nn1,bldggrade,
+                                               TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc))
+summary(reg1)
+```
+
+# Cross validation
+
+```{r}
+inTrain <- createDataPartition(
+              y = paste(salegroup$storyheigh.cat, salegroup$heatedfuel, salegroup$actype), 
+              p = .60, list = FALSE)
+Mecklenberg.training <- salegroup[inTrain,] 
+Mecklenberg.test <- salegroup[-inTrain,]  
+```
+
+```{r}
+reg.training <- lm(price ~ ., data = st_drop_geometry(Mecklenberg.training) %>% 
+                                 dplyr::select(price, heatedarea, bedrooms, 
+                                               age.cat,story.cat,fullbaths, halfbaths,
+                                               numfirepla,foundation, park_nn1,homelessshelter_nn1,landfill,flood100y,school_nn1,bus_nn1,station_nn1,bldggrade,
+                                               TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc))
+summary(reg.training)
+```
+
+
+##Test Set 
+
+```{r}
+Mecklenberg.test <-
+  Mecklenberg.test %>%
+  mutate(Regression = "Baseline Regression",
+         SalePrice.Predict = predict(reg.training, Mecklenberg.test),
+         SalePrice.Error = SalePrice.Predict - price,
+         SalePrice.AbsError = abs(SalePrice.Predict - price),
+         SalePrice.APE = (abs(SalePrice.Predict - price)) / SalePrice.Predict)%>%
+  filter(price < 5000000) 
+```
+
+```{r}
+ggplot() +
+  geom_sf(data=Mecklenberg,fill = "grey40", color = "grey10",size= 0.7)+
+  geom_sf(data = Mecklenberg.test, aes(colour = q5(as.numeric(SalePrice.AbsError))), 
+          show.legend = "point", size = .75) +
+  scale_colour_manual(values = palette5,
+                   labels=qBr(sale,"price"),
+                   name="Quintile\nBreaks") +
+  labs(title="Home Price Absolute Error, Mecklenberg") +
+  mapTheme()
+```
+
+
+
+```{r}
+fitControl <- trainControl(method = "cv", number = 100)
+set.seed(825)
+
+reg.cv <- 
+  train(price ~ ., data = st_drop_geometry(salegroup) %>% 
+                                dplyr::select(price, heatedarea, bedrooms, 
+                                               age.cat,story.cat,fullbaths, halfbaths,
+                                               numfirepla,foundation, park_nn1,homelessshelter_nn1,landfill,flood100y,school_nn1,bus_nn1,station_nn1,bldggrade,
+                                               TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc), 
+     method = "lm", trControl = fitControl, na.action = na.pass)
+
+reg.cv
+```
+```{r}
+reg.cv$resample[1:5,]
+```
+
+
+```{r goodness_metrics, message = FALSE, warning = FALSE}
+dplyr::select(reg.cv$resample, -Resample) %>%
+  gather(metric, value) %>%
+  left_join(gather(reg.cv$results[2:4], metric, mean)) %>%
+  ggplot(aes(value)) + 
+    geom_histogram(bins=35, fill = "#FF006A") +
+    facet_wrap(~metric) +
+    geom_vline(aes(xintercept = mean), colour = "#981FAC", linetype = 3, size = 1.5) +
+    scale_x_continuous(limits = c(0, 1)) +
+    labs(x="Goodness of Fit", y="Count", title="CV Goodness of Fit Metrics",
+         subtitle = "Across-fold mean reprented as dotted lines")
+
+```
+
+#Spatial Correlation of error
+
+
+
+
+```{r}
+coords.test <- st_coordinates(Mecklenberg.test) 
+
+neighborList.test <- knn2nb(knearneigh(coords.test, 5))
+
+spatialWeights.test <- nb2listw(neighborList.test, style="W")
+
+Mecklenberg.test$lagPrice <- lag.listw(spatialWeights.test, Mecklenberg.test$price)
+Mecklenberg.test$lagPriceError<-lag.listw(spatialWeights.test, Mecklenberg.test$SalePrice.Error, NAOK = TRUE)
+
+#Mecklenberg.test %>% 
+  #mutate(lagPriceError = lag.listw(spatialWeights.test, SalePrice.Error, NAOK = TRUE)) %>%
+  #ggplot(aes(lagPriceError, SalePrice.Error))
+
+```
+```{r}
+ggplot(Mecklenberg.test, aes(x=lagPrice, y=price)) +
+  geom_point(colour = "#FA7800") +
+  geom_smooth(method = "lm", se = FALSE, colour = "#25CB10") +
+  labs(title = "Price as a function of the spatial lag of price",
+       caption = "Figure 4.2",
+       x = "Spatial lag of price (Mean price of 5 nearest neighbors)",
+       y = "Sale Price") +
+  plotTheme()
+```
+
+```{r}
+ggplot(Mecklenberg.test, aes(x=lagPriceError, y=price)) +
+  geom_point(colour = "#FA7800") +
+  geom_smooth(method = "lm", se = FALSE, colour = "#25CB10") +
+  labs(title = "Error as a function of the spatial lag of price",
+       caption="Figure 4.3",
+       x = "Spatial lag of errors (Mean error of 5 nearest neighbors)",
+       y = "Sale Price") +
+  plotTheme()
+```
+#Moran's
+
+
+```{r}
+moranTest <- moran.mc(Mecklenberg.test$SalePrice.Error, 
+                      spatialWeights.test, nsim = 999, na.action=na.omit)
+
+ggplot(as.data.frame(moranTest$res[c(1:999)]), aes(moranTest$res[c(1:999)])) +
+  geom_histogram(binwidth = 0.01) +
+  geom_vline(aes(xintercept = moranTest$statistic), colour = "#FA7800",size=1) +
+  scale_x_continuous(limits = c(-1, 1)) +
+  labs(title="Observed and permuted Moran's I",
+       subtitle= "Observed Moran's I in orange",
+       x="Moran's I",
+       y="Count") +
+  plotTheme()
+```
+
+#Accounting for neighborhood
+
+
+
+```{r}
+# Errors by neighborhood
+left_join(
+  st_drop_geometry(Mecklenberg.test) %>%
+    group_by(npa) %>%
+    summarize(meanPrice = mean(price, na.rm = T)),
+  mutate(Mecklenberg.test, predict.fe = 
+                        predict(lm(price ~ npa, data = Mecklenberg.test), 
+                        Mecklenberg.test)) %>%
+    st_drop_geometry %>%
+    group_by(npa) %>%
+      summarize(meanPrediction = mean(predict.fe))) %>%
+      kable() %>% kable_styling()
+```
+
+
+```{r}
+reg.nhood <- lm(price ~ ., data = as.data.frame(Mecklenberg.training) %>% 
+                                 dplyr::select(npa, price, heatedarea, bedrooms, 
+                                               age.cat,story.cat,fullbaths, halfbaths,
+                                               numfirepla,foundation, park_nn1,homelessshelter_nn1,landfill,flood100y,school_nn1,bus_nn1,station_nn1,bldggrade,
+                                               TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc))
+
+Mecklenberg.test.nhood <-
+  Mecklenberg.test %>%
+  mutate(Regression = "Neighborhood Effects",
+         SalePrice.Predict = predict(reg.nhood, Mecklenberg.test),
+         SalePrice.Error = SalePrice.Predict- price,
+         SalePrice.AbsError = abs(SalePrice.Predict- price),
+         SalePrice.APE = (abs(SalePrice.Predict- price)) / price)%>%
+  filter(price < 5000000)
+```
+
+#Accuracy of the neighborhood mode
+```{r}
+bothRegressions <- 
+  rbind(
+    dplyr::select(Mecklenberg.test, starts_with("price"), Regression, npa) %>%
+      mutate(lagPriceError = lag.listw(spatialWeights.test, SalePrice.Error)),
+    dplyr::select(Mecklenberg.test.nhood, starts_with("price"), Regression, npa) %>%
+      mutate(lagPriceError = lag.listw(spatialWeights.test, SalePrice.Error)))   
+```
+
