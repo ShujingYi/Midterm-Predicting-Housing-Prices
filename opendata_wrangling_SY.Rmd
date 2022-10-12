@@ -1,5 +1,25 @@
+---
+title: "Predicting Housing Prices"
+author: "Shujing Yi, Yuehui Gong"
+date: '2022-10-10'
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+editor_options: 
+  markdown: 
+    wrap: 72
+---
 
 
+# Introduction
+As Zillow has realized that its housing market predictions are not as accurate as they could be because they do not factor in enough local intelligence in Mecklenburg, this project is to improve Zillow’s housing market predictions for Mecklenburg.
+
+To build a better housing price prediction regression model, our model includes three types of variables: external amenities, internal characteristics of houses from the given housing price dataset, and services from open data source, and spatial factors.
+
+
+# Setup
 ```{r setup, include=FALSE}
 
 # You can set some global options for knitting chunks
@@ -35,24 +55,26 @@ palette5 <- c("#25CB10", "#5AB60C", "#8FA108",   "#C48C04", "#FA7800")
 ```
 
 
-## Data Wrangling
 
-See if you can change the chunk options to get rid of the text outputs
+# Data Wrangling
+
+The given housing price dataset includes the housing price and internal characteristics information for each housing point.
+It is input as the base dataset for further feather engineering.
 
 ```{r read_data}
 sale <- 
   st_read("data/studentData.geojson") %>%
   st_transform('ESRI:102286')
+
+glimpse(sale)
 ```
-
-
-
 ```{r}
 Mecklenberg <- 
   st_read("data/npa/npa.shp") %>%
   st_transform('ESRI:102286')
 ```
 
+The following map visualize the distribution of housing points and their prices, which is represented in color.
 ```{r}
 ggplot() +
   geom_sf(data=Mecklenberg,fill = "grey40", color = "grey10",size= 0.7)+
@@ -67,20 +89,26 @@ ggplot() +
 
 
 
+## External Amenities
+The first part of variables our model is using is the external amenities, the proximity to which could add value to houses. To get the data, we are using the open data portal for Mecklenburg. (http://maps.co.mecklenburg.nc.us/openmapping/data.html)
 
-##bike lanes
+Our model is considering the following amenities and services:
+-Public Transportation: bus stop, station
+-Public Amenities: park, school
+-Potential negative factors: homeless shelter, flood, Landfill
 
-```{r}
-bikelanes <- st_read("data/bikelanes/BikeLanes.shp") %>%
-              st_transform(st_crs(Mecklenberg)) 
-plot(bikelanes)
-```
+
+
+### Bus Stop
+
 ```{r}
 busstop <- st_read("data/cats_busstops/CATS_BusStops.shp") #%>%
 #st_transform(st_crs(tracts20))
 ggplot() +
-  geom_sf(data = busstop) +
-  geom_sf(data=st_union(Mecklenberg),fill = "transparent", color = "grey10",size= 0.7)
+ geom_sf(data=Mecklenberg,fill = "white", color = "grey60",size= 0.5)+
+  geom_sf(data = busstop,size= 0.3)+
+    labs(title = "Bus Stops, Mecklenberg")
+  
 ```
 ```{r}
 sale <-
@@ -89,13 +117,14 @@ sale <-
 
 ```
 
-##Station
+### Station
 
 ```{r}
 station<- st_read("data/station_merge/station_merge.shp") 
 ggplot() +
-  geom_sf(data = station) +
-  geom_sf(data=st_union(Mecklenberg),fill = "transparent", color = "grey10",size= 0.7)
+ geom_sf(data=Mecklenberg,fill = "white", color = "grey60",size= 0.5)+
+    geom_sf(data = station) +
+    labs(title = "Stations, Mecklenberg")
 
 ```
 ```{r}
@@ -106,14 +135,14 @@ sale <-
 ```
 
 
+### Park
 
-##park
 ```{r}
 park <- st_read("data/park_locations/Park_Locations.shp") %>%
               st_transform(st_crs(Mecklenberg)) 
 
 
-ggplot() + geom_sf(data=st_union(Mecklenberg), color = "grey10",size= 0.7) +
+ggplot() + geom_sf(data=Mecklenberg,fill = "white", color = "grey60",size= 0.5)+
   stat_density2d(data = data.frame(st_coordinates(park)), 
                  aes(X, Y, fill = ..level.., alpha = ..level..),
                  size = 0.01, bins = 40, geom = 'polygon') +
@@ -121,8 +150,8 @@ ggplot() + geom_sf(data=st_union(Mecklenberg), color = "grey10",size= 0.7) +
                       breaks=c(0.000000003,0.00000003),
                       labels=c("Minimum","Maximum"), name = "Density") +
   scale_alpha(range = c(0.00, 0.35), guide = FALSE) +
-  labs(title = "Density of Park, Mecklenberg") +
-  mapTheme()
+  labs(title = "Density of Parks, Mecklenberg") 
+
 ```
 
 Calculate distance to the nearest park as park_nn1:
@@ -135,27 +164,8 @@ sale <-
 
 ```
 
-#Landfill
-```{r}
-landfill <- st_read("data/landfills/Landfills.shp") %>%
-              st_transform(st_crs(Mecklenberg)) 
 
-
-ggplot() +
-  geom_sf(data=Mecklenberg,fill = "white", color = "grey60",size= 0.5)+  
-  geom_sf(data = landfill, fill = "red") +
-   labs(title = "Landfill in Mecklenberg") 
-
-```
-```{r}
-sale <-
-  sale %>% 
-    mutate(landfill = nn_function(st_coordinates(sale), st_coordinates(st_centroid(landfill)), 1))
-```
-
-
-
-##School
+### School
 
 ```{r}
 school_public <- st_read("data/cms_schools/CMS_Schools.shp") %>%
@@ -183,7 +193,7 @@ sale <-
 ```
 
 
-##Homeless Shelter
+### Homeless Shelter
 
 ```{r}
 homelessshelter <- st_read("data/homeless_shelters/Homeless_Shelters.shp") %>%
@@ -210,9 +220,25 @@ sale <-
     mutate(homelessshelter_nn1 = nn_function(st_coordinates(sale), st_coordinates(homelessshelter), 1))
 ```
 
+### Landfill
+```{r}
+landfill <- st_read("data/landfills/Landfills.shp") %>%
+              st_transform(st_crs(Mecklenberg)) 
 
 
-##Floodplain
+ggplot() +
+  geom_sf(data=Mecklenberg,fill = "white", color = "grey60",size= 0.5)+  
+  geom_sf(data = landfill, fill = "red") +
+   labs(title = "Landfill in Mecklenberg") 
+
+```
+```{r}
+sale <-
+  sale %>% 
+    mutate(landfill = nn_function(st_coordinates(sale), st_coordinates(st_centroid(landfill)), 1))
+```
+
+### Floodplain
 
 ```{r}
 flood100y <- st_read("data/femaexisting_100yr_floodplain/FEMAExisting_100yr_Floodplain.shp") %>%
@@ -239,6 +265,7 @@ salegroup <-
 ```
 
 Map the houses within floodplain (flood100y == 1)
+
 ```{r}
 floodpt<-
   salegroup %>%
@@ -255,13 +282,22 @@ ggplot() +
 
 
 ```
-Age calculation
 
+
+
+## Internal Characteristics
+
+### Age
+
+Age calculation
 ```{r}
 salegroup <- 
   salegroup %>%
   mutate(age = 2022 - yearbuilt)
 ```
+
+
+
 
 
 
@@ -283,13 +319,6 @@ st_drop_geometry(salegroup) %>%
 
 ```
 
-
-
-These variables look weird: Park_nn3, Floodplain, station_nn123,bus,school_nn12
-
-```{r}
-table(salegroup$bedrooms)
-```
 
 
 ```{r fig.height=10, fig.width=12}
@@ -349,7 +378,8 @@ salegroup$story.cat <- recode(salegroup$storyheigh,"1.0 STORY"= "1story","1 STOR
 ```
 
 
-## Census Tract
+## Spatial Factors
+### Census Tract
 ```{r}
 census_api_key("a78f5d0c0fd577cd3f16136b5a87d6ecdb62ffba", overwrite = TRUE)
 
@@ -389,7 +419,7 @@ tracts <-
 ggplot()+
   geom_sf(data = tracts, fill = "transparent", color = "black")+
   geom_sf(data=salegroup, 
-          show.legend = "point", size= 0.5) +
+          show.legend = "point", size= 0.1) +
   labs(title = "Mecklenburg Census Tracts") +
   theme(plot.title = element_text(size=22))
 ```
@@ -404,7 +434,8 @@ salegroup<-st_intersection(salegroup,tracts)
 salegroup<-st_intersection(salegroup,Mecklenberg)
 ```
 
-##regression model
+
+# Regression Model
 
 Outer:homelessshelter_nn1,park_nn1,park_nn3,landfill,flood100y,school_nn1,school_nn2,school_nn3,bus_nn1,station_nn1
 Census:TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc,MedRent
@@ -630,6 +661,12 @@ bothRegressions %>%
 ```
 
 ```{r}
+nhoods <- 
+  st_read("data/npa/npa.shp") %>%
+  st_transform('ESRI:102286')
+
+
+  
 st_drop_geometry(bothRegressions) %>%
   group_by(Regression, npa) %>%
   summarize(mean.MAPE = mean(SalePrice.APE, na.rm = T)) %>%
