@@ -70,7 +70,7 @@ glimpse(sale)
 ```
 ```{r}
 Mecklenberg <- 
-  st_read("data/npa/npa.shp") %>%
+  st_read("data/zipcode/zipcode.shp") %>%
   st_transform('ESRI:102286')
 ```
 
@@ -595,13 +595,13 @@ ggplot(as.data.frame(moranTest$res[c(1:999)]), aes(moranTest$res[c(1:999)])) +
 # Errors by neighborhood
 left_join(
   st_drop_geometry(Mecklenberg.test) %>%
-    group_by(npa) %>%
+    group_by(zip) %>%
     summarize(meanPrice = mean(price, na.rm = T)),
   mutate(Mecklenberg.test, predict.fe = 
-                        predict(lm(price ~ npa, data = Mecklenberg.test), 
+                        predict(lm(price ~ zip, data = Mecklenberg.test), 
                         Mecklenberg.test)) %>%
     st_drop_geometry %>%
-    group_by(npa) %>%
+    group_by(zip) %>%
       summarize(meanPrediction = mean(predict.fe))) %>%
       kable() %>% kable_styling()
 ```
@@ -609,7 +609,7 @@ left_join(
 
 ```{r}
 reg.nhood <- lm(price ~ ., data = as.data.frame(Mecklenberg.training) %>% 
-                                 dplyr::select(npa, price, heatedarea, bedrooms, 
+                                 dplyr::select(zip, price, heatedarea, bedrooms, 
                                                age.cat,story.cat,fullbaths, halfbaths,
                                                numfirepla,foundation, park_nn1,homelessshelter_nn1,landfill,flood100y,school_nn1,bus_nn1,station_nn1,bldggrade,
                                                TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc))
@@ -624,19 +624,24 @@ Mecklenberg.test.nhood <-
   filter(price < 5000000)
 ```
 
+
+```{r}
+summary(reg.nhood)
+```
+
 #Accuracy of the neighborhood mode
 ```{r}
 bothRegressions <- 
   rbind(
-    dplyr::select(Mecklenberg.test, starts_with("price"), Regression, npa, SalePrice.Predict,SalePrice.Error,SalePrice.AbsError,SalePrice.APE) ,
-    dplyr::select(Mecklenberg.test.nhood, starts_with("price"), Regression, npa, SalePrice.Predict, SalePrice.Error,SalePrice.AbsError,SalePrice.APE))   
+    dplyr::select(Mecklenberg.test, starts_with("price"), Regression, zip, SalePrice.Predict,SalePrice.Error,SalePrice.AbsError,SalePrice.APE) ,
+    dplyr::select(Mecklenberg.test.nhood, starts_with("price"), Regression, zip, SalePrice.Predict, SalePrice.Error,SalePrice.AbsError,SalePrice.APE))   
 ```
 
 ```{r}
 
 st_drop_geometry(bothRegressions) %>% 
    mutate_if(is.numeric, ~ifelse(abs(.) == Inf,NA,.))%>% 
-  gather(Variable, Value, -Regression, -npa) %>%
+  gather(Variable, Value, -Regression, -zip) %>%
   filter(Variable == "SalePrice.AbsError" | Variable == "SalePrice.APE") %>%
   group_by(Regression, Variable) %>%
     summarize(meanValue = mean(Value, na.rm = T)) %>%
@@ -661,17 +666,15 @@ bothRegressions %>%
 ```
 
 ```{r}
-nhoods <- 
-  st_read("data/npa/npa.shp") %>%
-  st_transform('ESRI:102286')
+
 
 
   
 st_drop_geometry(bothRegressions) %>%
-  group_by(Regression, npa) %>%
+  group_by(Regression, zip) %>%
   summarize(mean.MAPE = mean(SalePrice.APE, na.rm = T)) %>%
   ungroup() %>% 
-  left_join(nhoods) %>%
+  left_join(Mecklenberg) %>%
     st_sf() %>%
     ggplot() + 
       geom_sf(aes(fill = mean.MAPE)) +
