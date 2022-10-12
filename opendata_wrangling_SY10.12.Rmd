@@ -702,8 +702,12 @@ Mecklenberg.training2 <-
 
 ```{r}
 CHALLENGE<-
-  rbind(Mecklenberg.test.nhood[Mecklenberg.test.nhood$toPredict=="CHALLENGE",c("SalePrice.Predict","musaID")],Mecklenberg.training2[Mecklenberg.training2$toPredict=="CHALLENGE",c("SalePrice.Predict","musaID")])%>%
-  st_drop_geometry
-  
+  rbind(Mecklenberg.test.nhood[Mecklenberg.test.nhood$toPredict=="CHALLENGE",c("SalePrice.Predict","musaID")],Mecklenberg.training2[Mecklenberg.training2$toPredict=="CHALLENGE",c("musaID","SalePrice.Predict")])%>%
+  st_drop_geometry%>%
+  rename(prediction = SalePrice.Predict)%>%
+subset(select=c(2,1)) 
+
+
+write.csv(CHALLENGE,"SY_group_prediction.csv", row.names = FALSE)
 ```
 
