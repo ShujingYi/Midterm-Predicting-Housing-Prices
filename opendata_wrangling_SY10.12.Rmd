@@ -443,7 +443,7 @@ Census:TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc,MedRent
 
 ```{r}
 reg1 <- lm(price ~ ., data = st_drop_geometry(salegroup) %>% 
-                                 dplyr::select(price, heatedarea, bedrooms, 
+                                 dplyr::select(price, zip,heatedarea, bedrooms, 
                                                age.cat,storyheigh,fullbaths, halfbaths,
                                                numfirepla,foundation, park_nn1,homelessshelter_nn1,landfill,flood100y,school_nn1,bus_nn1,station_nn1,bldggrade,
                                                TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc))
@@ -684,5 +684,23 @@ st_drop_geometry(bothRegressions) %>%
                           name = "MAPE") +
       labs(title = "Mean test set MAPE by neighborhood") +
       mapTheme()
+```
+
+
+
+```{r}
+Mecklenberg.training2 <-
+  Mecklenberg.training %>%
+  mutate(Regression = "Neighborhood Effects",
+         SalePrice.Predict = predict(reg.nhood, Mecklenberg.training),
+        )
+```
+
+
+```{r}
+CHALLENGE<-
+  rbind(Mecklenberg.test.nhood[Mecklenberg.test.nhood$toPredict=="CHALLENGE",c("SalePrice.Predict","musaID")],Mecklenberg.training2[Mecklenberg.training2$toPredict=="CHALLENGE",c("SalePrice.Predict","musaID")])%>%
+  st_drop_geometry
+  
 ```
 
