@@ -707,7 +707,6 @@ CHALLENGE<-
   rename(prediction = SalePrice.Predict)%>%
 subset(select=c(2,1)) 
 
-
 write.csv(CHALLENGE,"SY_group_prediction.csv", row.names = FALSE)
 ```
 
