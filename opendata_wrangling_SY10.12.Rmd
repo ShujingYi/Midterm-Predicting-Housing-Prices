@@ -12,6 +12,11 @@ editor_options:
     wrap: 72
 ---
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+
 
 # Introduction
 As Zillow has realized that its housing market predictions are not as accurate as they could be because they do not factor in enough local intelligence in Mecklenburg, this project is to improve Zillow’s housing market predictions for Mecklenburg.
@@ -20,7 +25,7 @@ To build a better housing price prediction regression model, our model includes 
 
 
 # Setup
-```{r setup, include=FALSE}
+```{r setup_set, include=FALSE}
 
 # You can set some global options for knitting chunks
 
@@ -199,20 +204,9 @@ sale <-
 homelessshelter <- st_read("data/homeless_shelters/Homeless_Shelters.shp") %>%
               st_transform(st_crs(Mecklenberg)) 
 ggplot() +
-  geom_sf(data = homelessshelter, fill = "red") +
-  geom_sf(data=st_union(Mecklenberg),fill = "transparent", color = "grey10",size= 0.7)
+  geom_sf(data=Mecklenberg,fill = "white", color = "grey60",size= 0.5)+
+  geom_sf(data = homelessshelter, fill = "red")
 
-
-ggplot() + geom_sf(data=st_union(Mecklenberg), color = "grey10",size= 0.7) +
-  stat_density2d(data = data.frame(st_coordinates(homelessshelter)), 
-                 aes(X, Y, fill = ..level.., alpha = ..level..),
-                 size = 0.01, bins = 40, geom = 'polygon') +
-  scale_fill_gradient(low = "#25CB10", high = "#FA7800", 
-                      breaks=c(0.000000003,0.00000003),
-                      labels=c("Minimum","Maximum"), name = "Density") +
-  scale_alpha(range = c(0.00, 0.35), guide = FALSE) +
-  labs(title = "Density of Aggravated Assaults, Boston") +
-  mapTheme()
 
 
 sale <-
@@ -228,7 +222,7 @@ landfill <- st_read("data/landfills/Landfills.shp") %>%
 
 ggplot() +
   geom_sf(data=Mecklenberg,fill = "white", color = "grey60",size= 0.5)+  
-  geom_sf(data = landfill, fill = "red") +
+  geom_sf(data = landfill, fill = "red", color = "transparent") +
    labs(title = "Landfill in Mecklenberg") 
 
 ```
@@ -293,6 +287,7 @@ ggplot() +
 ### Age
 
 Age calculation
+
 ```{r}
 salegroup <- 
   salegroup %>%
