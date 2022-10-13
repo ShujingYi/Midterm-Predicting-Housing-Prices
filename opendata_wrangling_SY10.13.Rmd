@@ -449,7 +449,13 @@ stargazer(as.data.frame(salegroup[c("park_nn1","homelessshelter_nn1","landfill",
 stargazer(as.data.frame(salegroup[c("TotalPop","pctWhite","pctBachelors","pctPoverty", "MedHHInc")]), type="text", 
           title="Spatial Structure", digits=1)
 ```
+```{r}
+salegroup_challenge <- salegroup %>%
+  filter (salegroup$toPredict == "CHALLENGE")
+salegroup <- salegroup %>%
+  filter (salegroup$toPredict == "MODELLING")
 
+```
 
 ## Home Price Correlation Scatter Plots
 ```{r}
@@ -489,13 +495,7 @@ ggcorrplot(
 
 
 # Results
-```{r}
-salegroup_challenge <- salegroup %>%
-  filter (salegroup$toPredict == "CHALLENGE")
-salegroup <- salegroup %>%
-  filter (salegroup$toPredict == "MODELLING")
 
-```
 ## OLS regression
 Outer:homelessshelter_nn1,park_nn1,park_nn3,landfill,flood100y,school_nn1,school_nn2,school_nn3,bus_nn1,station_nn1
 Census:TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc,MedRent
