@@ -741,13 +741,13 @@ st_drop_geometry(bothRegressions) %>%
 CHALLENGE <-
   salegroup_challenge %>%
   mutate(Regression = "Neighborhood Effects",
-         SalePrice.Predict = predict(reg.nhood, sale_challenge),
+         SalePrice.Predict = predict(reg.nhood, salegroup_challenge),
         )%>%
   st_drop_geometry%>%
   rename(prediction = SalePrice.Predict)%>%
-subset(select=c(2,1))
+subset(select=c("musaID","prediction"))
 
-write.csv(CHALLENGE,"SY_group_prediction.csv", row.names = FALSE)
+write.csv(CHALLENGE,"SY_group_prediction_2.csv", row.names = FALSE)
 ```
 
 
