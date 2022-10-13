@@ -17,27 +17,6 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
 ```
 
-```{r, include=FALSE}
-## Quick fix for stargazer <= 5.2.3 is.na() issue with long model names in R >= 4.2
-# Unload stargazer if loaded
-detach("package:stargazer",unload=T)
-# Delete it
-remove.packages("stargazer")
-# Download the source
-download.file("https://cran.r-project.org/src/contrib/stargazer_5.2.3.tar.gz", destfile = "stargazer_5.2.3.tar.gz")
-# Unpack
-untar("stargazer_5.2.3.tar.gz")
-# Read the sourcefile with .inside.bracket fun
-stargazer_src <- readLines("stargazer/R/stargazer-internal.R")
-# Move the length check 5 lines up so it precedes is.na(.)
-stargazer_src[1990] <- stargazer_src[1995]
-stargazer_src[1995] <- ""
-# Save back
-writeLines(stargazer_src, con="stargazer/R/stargazer-internal.R")
-# Compile and install the patched package
-install.packages("stargazer", repos = NULL, type="source")
-```
-
 # Introduction
 
 As Zillow has realized that its housing market predictions are not as
@@ -99,8 +78,6 @@ sale <-
   st_transform('ESRI:102286')
 
 ```
-
-
 
 ```{r, results='hide'}
 Mecklenberg <- 
@@ -432,24 +409,6 @@ salegroup<-st_intersection(salegroup,tracts)
 salegroup<-st_intersection(salegroup,Mecklenberg)
 ```
 
-## table of summary statistics
-
-
-```{r}
-stargazer(as.data.frame(salegroup[c("price","heatedarea","bedrooms","fullbaths","halfbaths","numfirepla","foundation","heatedfuel","actype","units","accounttyp")]), type="text", 
-          title="Internal Characteristics", digits=1)
-```
-```{r}
-stargazer(as.data.frame(salegroup[c("park_nn1","homelessshelter_nn1","landfill","flood100y","school_nn1","bus_nn1","station_nn1")]), type="text", 
-          title="Amenities/public Services", digits=1)
-```
-
-
-```{r}
-stargazer(as.data.frame(salegroup[c("TotalPop","pctWhite","pctBachelors","pctPoverty", "MedHHInc")]), type="text", 
-          title="Spatial Structure", digits=1)
-```
-
 
 ## Home Price Correlation Scatter Plots
 ```{r}
@@ -478,8 +437,14 @@ ggcorrplot(
   insig = "blank") +  
     labs(title = "Correlation across numeric variables") 
 ```
+```{r}
+stargazer(salegroup, type = "text",title="(Numeric Internal Characteristics",
+          covariate.labels=c("price","No. of cylinders","Displacement (cu.in.)",
+ "Gross horsepower","Rear axle ratio","Weight (lb/1000)",
+ "1/4 mile time","V/S","Transmission (0=auto, 1=manual)",
+ "Number of forward gears","Number of carburetors"))
 
-
+```
 
 
 # Methods
@@ -489,13 +454,7 @@ ggcorrplot(
 
 
 # Results
-```{r}
-salegroup_challenge <- salegroup %>%
-  filter (salegroup$toPredict == "CHALLENGE")
-salegroup <- salegroup %>%
-  filter (salegroup$toPredict == "MODELLING")
 
-```
 ## OLS regression
 Outer:homelessshelter_nn1,park_nn1,park_nn3,landfill,flood100y,school_nn1,school_nn2,school_nn3,bus_nn1,station_nn1
 Census:TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc,MedRent
@@ -737,20 +696,23 @@ st_drop_geometry(bothRegressions) %>%
       mapTheme()
 ```
 
-```{r,include=FALSE}
-CHALLENGE <-
-  salegroup_challenge %>%
+```{r}
+Mecklenberg.training2 <-
+  Mecklenberg.training %>%
   mutate(Regression = "Neighborhood Effects",
-         SalePrice.Predict = predict(reg.nhood, sale_challenge),
-        )%>%
+         SalePrice.Predict = predict(reg.nhood, Mecklenberg.training),
+        )
+```
+
+```{r}
+CHALLENGE<-
+  rbind(Mecklenberg.test.nhood[Mecklenberg.test.nhood$toPredict=="CHALLENGE",c("SalePrice.Predict","musaID")],Mecklenberg.training2[Mecklenberg.training2$toPredict=="CHALLENGE",c("musaID","SalePrice.Predict")])%>%
   st_drop_geometry%>%
   rename(prediction = SalePrice.Predict)%>%
-subset(select=c(2,1))
+subset(select=c(2,1)) 
 
 write.csv(CHALLENGE,"SY_group_prediction.csv", row.names = FALSE)
 ```
-
-
 
 # Discussion
 
