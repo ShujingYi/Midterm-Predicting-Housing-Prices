@@ -540,7 +540,13 @@ stargazer(as.data.frame(salegroup[c("park_nn1","homelessshelter_nn1","landfill",
 stargazer(as.data.frame(salegroup[c("TotalPop","pctWhite","pctBachelors","pctPoverty", "MedHHInc")]), type="text", 
           title="Spatial Structure", digits=1)
 ```
+```{r}
+salegroup_challenge <- salegroup %>%
+  filter (salegroup$toPredict == "CHALLENGE")
+salegroup <- salegroup %>%
+  filter (salegroup$toPredict == "MODELLING")
 
+```
 
 ## Home Price Correlation Scatter Plots
 
@@ -614,6 +620,7 @@ ggcorrplot(
 After selecting all the "MODELLING" data from our dataset, the data is split into training and test datasets,, which is 60% and 40% respectively. Models will be trained on the training set and tested on the latter to see how accurate our model is.
 
 
+<<<<<<< HEAD
 # Modeling
 ```{r}
 salegroup_challenge <- salegroup %>%
@@ -623,6 +630,12 @@ salegroup <- salegroup %>%
 
 ```
 
+=======
+
+
+# Results
+
+>>>>>>> a635d6e021c0b5433b8ed2cba4619a8afcc7c217
 ## OLS regression
 
 Outer:homelessshelter_nn1,park_nn1,park_nn3,landfill,flood100y,school_nn1,school_nn2,school_nn3,bus_nn1,station_nn1
