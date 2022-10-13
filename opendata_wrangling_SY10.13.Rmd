@@ -443,6 +443,7 @@ salegroup<-st_intersection(salegroup,Mecklenberg)
 
 # Regression Model
 
+<<<<<<< Updated upstream
 Outer:homelessshelter_nn1,park_nn1,park_nn3,landfill,flood100y,school_nn1,school_nn2,school_nn3,bus_nn1,station_nn1
 Census:TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc,MedRent
 
@@ -455,6 +456,12 @@ reg1 <- lm(price ~ ., data = st_drop_geometry(salegroup) %>%
                                                TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc))
 summary(reg1)
 ```
+=======
+
+# Results
+
+## OLS regression
+>>>>>>> Stashed changes
 
 # Cross validation
 
