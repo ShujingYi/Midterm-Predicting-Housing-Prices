@@ -460,7 +460,7 @@ summary(reg1)
 
 ```{r}
 inTrain <- createDataPartition(
-              y = paste(salegroup$storyheigh.cat, salegroup$heatedfuel, salegroup$actype), 
+              y = paste(salegroup$age.cat, salegroup$story.cat,salegroup$heatedfuel, salegroup$actype), 
               p = .60, list = FALSE)
 Mecklenberg.training <- salegroup[inTrain,] 
 Mecklenberg.test <- salegroup[-inTrain,]  
@@ -724,5 +724,9 @@ CHALLENGE<- Mecklenberg.final[Mecklenberg.final$toPredict=="CHALLENGE",c("SalePr
 
 ```{r}
 
+<<<<<<< Updated upstream:opendata_wrangling_SY10.12.Rmd
+=======
+write.csv(CHALLENGE,"SY_group_prediction2.csv", row.names = FALSE)
+>>>>>>> Stashed changes:opendata_wrangling_SY10.13.Rmd
 ```
 
