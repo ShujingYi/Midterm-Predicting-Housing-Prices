@@ -1,6 +1,6 @@
 ---
 title: "Predicting Housing Prices"
-author: "Shujing Yi, Yuehui Gong"
+author: "Shujing Yi & Yuehui Gong"
 date: '2022-10-10'
 output:
   html_document:
@@ -17,15 +17,22 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
 ```
 
-
 # Introduction
-As Zillow has realized that its housing market predictions are not as accurate as they could be because they do not factor in enough local intelligence in Mecklenburg, this project is to improve Zillow’s housing market predictions for Mecklenburg.
 
-To build a better housing price prediction regression model, our model includes three types of variables: external amenities, internal characteristics of houses from the given housing price dataset, and services from open data source, and spatial factors.
+As Zillow has realized that its housing market predictions are not as
+accurate as they could be because they do not factor in enough local
+intelligence in Mecklenburg, this project is to improve Zillow's housing
+market predictions for Mecklenburg.
+
+To build a better housing price prediction regression model, our model
+includes three types of variables: external amenities, internal
+characteristics of houses from the given housing price dataset, and
+services from open data source, and spatial factors.
 
 
-# Setup
-```{r setup_set, include=FALSE}
+## Setup
+
+```{r setup_set}
 
 # You can set some global options for knitting chunks
 
@@ -49,7 +56,7 @@ library(jtools)     # for regression model plots
 library(ggstance) # to support jtools plots
 library(ggpubr)    # plotting R^2 value on ggplot point scatter
 library(broom.mixed) # needed for effects plots
-
+library(stargazer)
 
 # functions and data directory
 root.dir = "https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/DATA/"
@@ -59,27 +66,28 @@ source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-L
 palette5 <- c("#25CB10", "#5AB60C", "#8FA108",   "#C48C04", "#FA7800")
 ```
 
-
-
 # Data Wrangling
 
-The given housing price dataset includes the housing price and internal characteristics information for each housing point.
-It is input as the base dataset for further feather engineering.
+The given housing price dataset includes the housing price and internal
+characteristics information for each housing point. It is input as the
+base dataset for further feather engineering.
 
-```{r read_data}
+```{r, results='hide'}
 sale <- 
   st_read("data/studentData.geojson") %>%
   st_transform('ESRI:102286')
 
-glimpse(sale)
 ```
-```{r}
+
+```{r, results='hide'}
 Mecklenberg <- 
   st_read("data/zipcode/zipcode.shp") %>%
   st_transform('ESRI:102286')
 ```
 
-The following map visualize the distribution of housing points and their prices, which is represented in color.
+The following map visualize the distribution of housing points and their
+prices, which is represented in color.
+
 ```{r}
 ggplot() +
   geom_sf(data=Mecklenberg,fill = "grey40", color = "grey10",size= 0.7)+
@@ -92,21 +100,20 @@ ggplot() +
   mapTheme()
 ```
 
-
-
 ## External Amenities
-The first part of variables our model is using is the external amenities, the proximity to which could add value to houses. To get the data, we are using the open data portal for Mecklenburg. (http://maps.co.mecklenburg.nc.us/openmapping/data.html)
 
-Our model is considering the following amenities and services:
--Public Transportation: bus stop, station
--Public Amenities: park, school
+The first part of variables our model is using is the external
+amenities, the proximity to which could add value to houses. To get the
+data, we are using the open data portal for Mecklenburg.
+(<http://maps.co.mecklenburg.nc.us/openmapping/data.html>)
+
+Our model is considering the following amenities and services: -Public
+Transportation: bus stop, station -Public Amenities: park, school
 -Potential negative factors: homeless shelter, flood, Landfill
-
-
 
 ### Bus Stop
 
-```{r}
+```{r, results='hide'}
 busstop <- st_read("data/cats_busstops/CATS_BusStops.shp") #%>%
 #st_transform(st_crs(tracts20))
 ggplot() +
@@ -115,6 +122,7 @@ ggplot() +
     labs(title = "Bus Stops, Mecklenberg")
   
 ```
+
 ```{r}
 sale <-
   sale %>% 
@@ -124,7 +132,7 @@ sale <-
 
 ### Station
 
-```{r}
+```{r, results='hide'}
 station<- st_read("data/station_merge/station_merge.shp") 
 ggplot() +
  geom_sf(data=Mecklenberg,fill = "white", color = "grey60",size= 0.5)+
@@ -132,6 +140,7 @@ ggplot() +
     labs(title = "Stations, Mecklenberg")
 
 ```
+
 ```{r}
 sale <-
   sale %>% 
@@ -139,10 +148,9 @@ sale <-
 
 ```
 
-
 ### Park
 
-```{r}
+```{r, results='hide'}
 park <- st_read("data/park_locations/Park_Locations.shp") %>%
               st_transform(st_crs(Mecklenberg)) 
 
@@ -169,10 +177,9 @@ sale <-
 
 ```
 
-
 ### School
 
-```{r}
+```{r, results='hide'}
 school_public <- st_read("data/cms_schools/CMS_Schools.shp") %>%
               st_transform(st_crs(Mecklenberg)) %>%
   dplyr::select(city, address)
@@ -189,6 +196,7 @@ ggplot()+
   geom_sf(data=school)+
     labs(title = "Public Schools in Mecklenberg") 
 ```
+
 ```{r}
 sale <-
   sale %>% 
@@ -197,10 +205,9 @@ sale <-
    school_nn3 = nn_function(st_coordinates(sale), st_coordinates(school), 3))
 ```
 
-
 ### Homeless Shelter
 
-```{r}
+```{r, results='hide'}
 homelessshelter <- st_read("data/homeless_shelters/Homeless_Shelters.shp") %>%
               st_transform(st_crs(Mecklenberg)) 
 ggplot() +
@@ -215,7 +222,8 @@ sale <-
 ```
 
 ### Landfill
-```{r}
+
+```{r, results='hide'}
 landfill <- st_read("data/landfills/Landfills.shp") %>%
               st_transform(st_crs(Mecklenberg)) 
 
@@ -226,6 +234,7 @@ ggplot() +
    labs(title = "Landfill in Mecklenberg") 
 
 ```
+
 ```{r}
 sale <-
   sale %>% 
@@ -234,7 +243,7 @@ sale <-
 
 ### Floodplain
 
-```{r}
+```{r, results='hide'}
 flood100y <- st_read("data/femaexisting_100yr_floodplain/FEMAExisting_100yr_Floodplain.shp") %>%
               st_transform(st_crs(Mecklenberg)) 
 ggplot() +
@@ -280,43 +289,10 @@ ggplot() +
 
 ```
 
-
-
 ## Internal Characteristics
 
-### Age
 
-Age calculation
-
-```{r}
-salegroup <- 
-  salegroup %>%
-  mutate(age = 2022 - yearbuilt)
-```
-
-
-
-
-
-
-##Test
-
-
-```{r fig.height=10, fig.width=12}
-
-st_drop_geometry(salegroup) %>% 
-  dplyr::select(price, age, heatedarea, fullbaths, bedrooms,homelessshelter_nn1,park_nn1,park_nn3,landfill,flood100y,school_nn1,school_nn2,school_nn3,bus_nn1,station_nn1) %>%
-  filter(price <= 1000000, age<500, bedrooms<20) %>%
-  gather(Variable, Value, -price) %>% 
-  
-   ggplot(aes(Value, price)) +
-     geom_point(size = .5) + geom_smooth(method = "lm", se=F, colour = "#FA7800") +
-     facet_wrap(~Variable, ncol = 4, scales = "free") +
-     labs(title = "Price as a function of continuous variables") +
-     plotTheme()
-
-```
-
+##categorical change
 
 
 ```{r fig.height=10, fig.width=12}
@@ -332,29 +308,26 @@ st_drop_geometry(salegroup) %>%
      plotTheme() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-```{r}
-numericVars <- 
-  select_if(st_drop_geometry(salegroup), is.numeric) %>% na.omit()
 
-ggcorrplot(
-  round(cor(numericVars), 1), 
-  p.mat = cor_pmat(numericVars),
-  colors = c("#25CB10", "white", "#FA7800"),
-  type="lower",
-  insig = "blank") +  
-    labs(title = "Correlation across numeric variables") 
-```
 
-##categorical change
+
 
 ### Age
+
+Age calculation
+
+```{r}
+salegroup <- 
+  salegroup %>%
+  mutate(age = 2022 - yearbuilt)
+```
+
 
 ```{r}
 s <-salegroup %>% 
   filter(age <= 200) 
 histogram(s$age,breaks=40)
 ```
-
 
 ```{r}
 salegroup <- 
@@ -367,7 +340,8 @@ salegroup <-
 ```
 
 ### Story height
-```{r}
+
+```{r,results='hide'}
 glimpse(s$storyheigh)
 
 
@@ -375,10 +349,11 @@ salegroup$story.cat <- recode(salegroup$storyheigh,"1.0 STORY"= "1story","1 STOR
 
 ```
 
+##  Spatial Factors
 
-## Spatial Factors
 ### Census Tract
-```{r}
+
+```{r, results='hide'}
 census_api_key("a78f5d0c0fd577cd3f16136b5a87d6ecdb62ffba", overwrite = TRUE)
 
 tracts <-  
@@ -392,6 +367,7 @@ tracts <-
   st_transform('ESRI:102286')
 
 ```
+
 ```{r}
 tracts <- 
   tracts %>%
@@ -421,7 +397,8 @@ ggplot()+
   labs(title = "Mecklenburg Census Tracts") +
   theme(plot.title = element_text(size=22))
 ```
-###Intersection
+
+### ZIP code
 
 ```{r}
 salegroup<-st_intersection(salegroup,tracts)
@@ -433,11 +410,54 @@ salegroup<-st_intersection(salegroup,Mecklenberg)
 ```
 
 
-# Regression Model
+## Home Price Correlation Scatter Plots
+```{r}
+st_drop_geometry(salegroup) %>% 
+  dplyr::select(price, age, heatedarea, fullbaths, bedrooms,homelessshelter_nn1,park_nn1,park_nn3,landfill,flood100y,school_nn1,school_nn2,school_nn3,bus_nn1,station_nn1) %>%
+  filter(price <= 1000000, age<500, bedrooms<20) %>%
+  gather(Variable, Value, -price) %>% 
+  
+   ggplot(aes(Value, price)) +
+     geom_point(size = .5) + geom_smooth(method = "lm", se=F, colour = "#FA7800") +
+     facet_wrap(~Variable, ncol = 4, scales = "free") +
+     labs(title = "Price as a function of continuous variables") +
+     plotTheme()
+```
 
+## Correlation Matrix
+```{r}
+numericVars <- 
+  select_if(st_drop_geometry(salegroup), is.numeric) %>% na.omit()
+
+ggcorrplot(
+  round(cor(numericVars), 1), 
+  p.mat = cor_pmat(numericVars),
+  colors = c("#25CB10", "white", "#FA7800"),
+  type="lower",
+  insig = "blank") +  
+    labs(title = "Correlation across numeric variables") 
+```
+```{r}
+stargazer(salegroup, type = "text",title="(Numeric Internal Characteristics",
+          covariate.labels=c("price","No. of cylinders","Displacement (cu.in.)",
+ "Gross horsepower","Rear axle ratio","Weight (lb/1000)",
+ "1/4 mile time","V/S","Transmission (0=auto, 1=manual)",
+ "Number of forward gears","Number of carburetors"))
+
+```
+
+
+# Methods
+
+
+
+
+
+# Results
+
+## OLS regression
 Outer:homelessshelter_nn1,park_nn1,park_nn3,landfill,flood100y,school_nn1,school_nn2,school_nn3,bus_nn1,station_nn1
 Census:TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc,MedRent
-
 
 ```{r}
 reg1 <- lm(price ~ ., data = st_drop_geometry(salegroup) %>% 
@@ -448,11 +468,11 @@ reg1 <- lm(price ~ ., data = st_drop_geometry(salegroup) %>%
 summary(reg1)
 ```
 
-# Cross validation
+## Cross validation
 
 ```{r}
 inTrain <- createDataPartition(
-              y = paste(salegroup$storyheigh.cat, salegroup$heatedfuel, salegroup$actype), 
+              y = paste(salegroup$story.cat,salegroup$age.cat,salegroup$heatedfuel, salegroup$actype), 
               p = .60, list = FALSE)
 Mecklenberg.training <- salegroup[inTrain,] 
 Mecklenberg.test <- salegroup[-inTrain,]  
@@ -467,8 +487,7 @@ reg.training <- lm(price ~ ., data = st_drop_geometry(Mecklenberg.training) %>%
 summary(reg.training)
 ```
 
-
-##Test Set 
+##Test Set
 
 ```{r}
 Mecklenberg.test <-
@@ -493,8 +512,6 @@ ggplot() +
   mapTheme()
 ```
 
-
-
 ```{r}
 fitControl <- trainControl(method = "cv", number = 100)
 set.seed(825)
@@ -509,10 +526,10 @@ reg.cv <-
 
 reg.cv
 ```
+
 ```{r}
 reg.cv$resample[1:5,]
 ```
-
 
 ```{r goodness_metrics, message = FALSE, warning = FALSE}
 dplyr::select(reg.cv$resample, -Resample) %>%
@@ -528,8 +545,7 @@ dplyr::select(reg.cv$resample, -Resample) %>%
 
 ```
 
-#Spatial Correlation of error
-
+## Spatial Correlation of error
 
 ```{r}
 coords.test <- st_coordinates(Mecklenberg.test) 
@@ -546,6 +562,7 @@ Mecklenberg.test$lagPriceError<-lag.listw(spatialWeights.test, Mecklenberg.test$
   #ggplot(aes(lagPriceError, SalePrice.Error))
 
 ```
+
 ```{r}
 ggplot(Mecklenberg.test, aes(x=lagPrice, y=price)) +
   geom_point(colour = "#FA7800") +
@@ -567,8 +584,8 @@ ggplot(Mecklenberg.test, aes(x=lagPriceError, y=price)) +
        y = "Sale Price") +
   plotTheme()
 ```
-#Moran's
 
+## Moran's
 
 ```{r}
 moranTest <- moran.mc(Mecklenberg.test$SalePrice.Error, 
@@ -585,9 +602,7 @@ ggplot(as.data.frame(moranTest$res[c(1:999)]), aes(moranTest$res[c(1:999)])) +
   plotTheme()
 ```
 
-#Accounting for neighborhood
-
-
+## Accounting for neighborhood
 
 ```{r}
 # Errors by neighborhood
@@ -603,7 +618,6 @@ left_join(
       summarize(meanPrediction = mean(predict.fe))) %>%
       kable() %>% kable_styling()
 ```
-
 
 ```{r}
 reg.nhood <- lm(price ~ ., data = as.data.frame(Mecklenberg.training) %>% 
@@ -622,12 +636,12 @@ Mecklenberg.test.nhood <-
   filter(price < 5000000)
 ```
 
-
 ```{r}
 summary(reg.nhood)
 ```
 
-#Accuracy of the neighborhood mode
+## Accuracy of the neighborhood mode
+
 ```{r}
 bothRegressions <- 
   rbind(
@@ -646,6 +660,7 @@ st_drop_geometry(bothRegressions) %>%
     spread(Variable, meanValue) %>%
     kable()
 ```
+
 ```{r}
 bothRegressions %>%
   dplyr::select(SalePrice.Predict, price, Regression) %>%
@@ -664,9 +679,6 @@ bothRegressions %>%
 ```
 
 ```{r}
-
-
-
   
 st_drop_geometry(bothRegressions) %>%
   group_by(Regression, zip) %>%
@@ -684,8 +696,6 @@ st_drop_geometry(bothRegressions) %>%
       mapTheme()
 ```
 
-
-
 ```{r}
 Mecklenberg.training2 <-
   Mecklenberg.training %>%
@@ -693,7 +703,6 @@ Mecklenberg.training2 <-
          SalePrice.Predict = predict(reg.nhood, Mecklenberg.training),
         )
 ```
-
 
 ```{r}
 CHALLENGE<-
@@ -705,3 +714,6 @@ subset(select=c(2,1))
 write.csv(CHALLENGE,"SY_group_prediction.csv", row.names = FALSE)
 ```
 
+# Discussion
+
+# Conclusion
