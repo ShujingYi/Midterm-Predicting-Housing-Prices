@@ -13,6 +13,7 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
+
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
 ```
@@ -49,7 +50,6 @@ To build a better housing price prediction regression model, our model
 includes three types of variables: external amenities, internal
 characteristics of houses from the given housing price dataset, and
 services from open data source, and spatial factors.
-
 
 ## Setup
 
@@ -100,8 +100,6 @@ sale <-
 
 ```
 
-
-
 ```{r, results='hide'}
 Mecklenberg <- 
   st_read("data/zipcode/zipcode.shp") %>%
@@ -111,7 +109,9 @@ Mecklenberg <-
 The following map visualize the distribution of housing points and their
 prices, which is represented in color.
 
-It is clear the housing price distribution shows spatial clustering: the houses with high price, represented in orange, mainly distribute in the southern neighborhoods and other clusters near the county boundary.
+It is clear the housing price distribution shows spatial clustering: the
+houses with high price, represented in orange, mainly distribute in the
+southern neighborhoods and other clusters near the county boundary.
 
 ```{r}
 ggplot() +
@@ -127,20 +127,20 @@ ggplot() +
 
 ## External Amenities
 
-The first part of variables our model is to use the external
-amenities, the proximity to which could add value to houses. To get the
-data, we are using the open data portal for Mecklenburg.
+The first part of variables our model is to use the external amenities,
+the proximity to which could add value to houses. To get the data, we
+are using the open data portal for Mecklenburg.
 (<http://maps.co.mecklenburg.nc.us/openmapping/data.html>)
 
-Our model is considering the following amenities and services: 
--Public Transportation: bus stop, station 
--Public Amenities: park, school
+Our model is considering the following amenities and services: -Public
+Transportation: bus stop, station -Public Amenities: park, school
 -Potential negative factors: homeless shelter, flood, Landfill
-
 
 ### Bus Stop
 
-As part of the public transportation system, being close to bus stops might add value to housing price. The following map shows the bus stops in Mecklenburg. 
+As part of the public transportation system, being close to bus stops
+might add value to housing price. The following map shows the bus stops
+in Mecklenburg.
 
 ```{r, results='hide'}
 busstop <- st_read("data/cats_busstops/CATS_BusStops.shp") #%>%
@@ -152,7 +152,9 @@ ggplot() +
   
 ```
 
-The distance from each house to the nearest bus stop is calculated as “bus_nn1”, which could be one important external variables for our model.
+The distance from each house to the nearest bus stop is calculated as
+"bus_nn1", which could be one important external variables for our
+model.
 
 ```{r}
 sale <-
@@ -163,7 +165,10 @@ sale <-
 
 ### Station
 
-Similar to bus stops, metro station is a significant part of transportation service. The following map shows the station stops in Mecklenburg and “station_nn1” is measured as the nearest distance from house to metro station.
+Similar to bus stops, metro station is a significant part of
+transportation service. The following map shows the station stops in
+Mecklenburg and "station_nn1" is measured as the nearest distance from
+house to metro station.
 
 ```{r, results='hide'}
 station<- st_read("data/station_merge/station_merge.shp") 
@@ -183,7 +188,11 @@ sale <-
 
 ### Park
 
-Park is serving as a public amenities for people’s daily recreation, as is shown in the following density map, and the distance to park could be considered. Thus, we are calculating the distance to the nearest park as “park_nn1” and mean distance to the 3 nearest parks as “park_nn3”. Further analysis would be down to select the more effective variable.
+Park is serving as a public amenities for people's daily recreation, as
+is shown in the following density map, and the distance to park could be
+considered. Thus, we are calculating the distance to the nearest park as
+"park_nn1" and mean distance to the 3 nearest parks as "park_nn3".
+Further analysis would be down to select the more effective variable.
 
 ```{r, results='hide'}
 park <- st_read("data/park_locations/Park_Locations.shp") %>%
@@ -202,8 +211,6 @@ ggplot() + geom_sf(data=Mecklenberg,fill = "white", color = "grey60",size= 0.5)+
 
 ```
 
-
-
 ```{r}
 sale <-
   sale %>% 
@@ -214,8 +221,10 @@ sale <-
 
 ### School
 
-Also as an important amenity, we are using public school point data, including elementary, middle, high school and charter school. 
-It might be more helpful to think of school district data, but it is not available from the open data source.
+Also as an important amenity, we are using public school point data,
+including elementary, middle, high school and charter school. It might
+be more helpful to think of school district data, but it is not
+available from the open data source.
 
 ```{r, results='hide'}
 school_public <- st_read("data/cms_schools/CMS_Schools.shp") %>%
@@ -235,7 +244,9 @@ ggplot()+
     labs(title = "Public Schools in Mecklenburg") 
 ```
 
-“school_nn1”, “school_nn2”, “school_nn3” are calculated as the mean distance to the nearest, 2 nearest and 3 nearest schools from each housing points.
+"school_nn1", "school_nn2", "school_nn3" are calculated as the mean
+distance to the nearest, 2 nearest and 3 nearest schools from each
+housing points.
 
 ```{r}
 sale <-
@@ -247,7 +258,9 @@ sale <-
 
 ### Homeless Shelter
 
-Homeless shelters is part of the potential negative factors, which are mainly located at the center of Mecklenberg county. Thus, the proximity to homeless shelter is calculated as “homelessshelter_nn1”.
+Homeless shelters is part of the potential negative factors, which are
+mainly located at the center of Mecklenberg county. Thus, the proximity
+to homeless shelter is calculated as "homelessshelter_nn1".
 
 ```{r, results='hide'}
 homelessshelter <- st_read("data/homeless_shelters/Homeless_Shelters.shp") %>%
@@ -266,7 +279,8 @@ sale <-
 
 ### Landfill
 
-Another potential negative factor which might impact the housing price is the landfill. The landfill parcels are visualized in the map.
+Another potential negative factor which might impact the housing price
+is the landfill. The landfill parcels are visualized in the map.
 
 ```{r, results='hide'}
 landfill <- st_read("data/landfills/Landfills.shp") %>%
@@ -280,7 +294,9 @@ ggplot() +
 
 ```
 
-To do the feature engineering, we use st_centroid to extract the center points and then calculate the nearest distance from houses to landfill center points.
+To do the feature engineering, we use st_centroid to extract the center
+points and then calculate the nearest distance from houses to landfill
+center points.
 
 ```{r}
 sale <-
@@ -290,7 +306,10 @@ sale <-
 
 ### Floodplain
 
-We find flooding might be another concern when people are buying their houses, which means whether or not the houses are within the 100 year floodplain could a significant variable for our model. The map shows the 100 year floodplain along the water way.
+We find flooding might be another concern when people are buying their
+houses, which means whether or not the houses are within the 100 year
+floodplain could a significant variable for our model. The map shows the
+100 year floodplain along the water way.
 
 ```{r, results='hide'}
 flood100y <- st_read("data/femaexisting_100yr_floodplain/FEMAExisting_100yr_Floodplain.shp") %>%
@@ -301,7 +320,10 @@ ggplot() +
   labs(title = "100 year Floodplain in Mecklenburg") 
 ```
 
-Then we map the houses within the floodplain in red in the following map. We create a binary variable called “flood100y” to assign “1” to houses within the floodplain and “0” to houses that will not be impacted by 100 year flood.
+Then we map the houses within the floodplain in red in the following
+map. We create a binary variable called "flood100y" to assign "1" to
+houses within the floodplain and "0" to houses that will not be impacted
+by 100 year flood.
 
 ```{r}
 salegroup <- 
@@ -340,27 +362,24 @@ ggplot() +
 
 ## Internal Characteristics
 
-The second part of variables for our model is the internal characteristics, which are the variables of the housing characteristics from the given housing data.
+The second part of variables for our model is the internal
+characteristics, which are the variables of the housing characteristics
+from the given housing data.
 
-The following is the variables to consider:
--Heated area
--Bedrooms
--Full baths
--Half baths
--Housing age
--Housing story height
--Fire place number
--Foundation types
--Heated fuel types
--Architecture types
--Units
--Account types
+The following is the variables to consider: -Heated area -Bedrooms -Full
+baths -Half baths -Housing age -Housing story height -Fire place number
+-Foundation types -Heated fuel types -Architecture types -Units -Account
+types
 
-In this part, we are doing feature engineering to either transform numeric variables to categorical variables or recategorize the categorical variables to increase the model accuracy.
+In this part, we are doing feature engineering to either transform
+numeric variables to categorical variables or recategorize the
+categorical variables to increase the model accuracy.
 
 ### Categorical Bar Plot
 
-To identify the categorical variables which have high correlation with price, we first make the bar plots showing price as a function of categorical variables.
+To identify the categorical variables which have high correlation with
+price, we first make the bar plots showing price as a function of
+categorical variables.
 
 ```{r fig.height=8, fig.width=12}
 st_drop_geometry(salegroup) %>% 
@@ -375,20 +394,20 @@ st_drop_geometry(salegroup) %>%
      plotTheme() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-It shows that the variables of architecture type, building grade, heated fuel type and story height are all correlated with sale price and they can be our potential variables.
-
-
+It shows that the variables of architecture type, building grade, heated
+fuel type and story height are all correlated with sale price and they
+can be our potential variables.
 
 ### Age
 
-One key characteristics of a house to consider is its age.  We first calculate the age (age = 2022 - yearbuilt).
+One key characteristics of a house to consider is its age. We first
+calculate the age (age = 2022 - yearbuilt).
 
 ```{r}
 salegroup <- 
   salegroup %>%
   mutate(age = 2022 - yearbuilt)
 ```
-
 
 ```{r}
 s <-salegroup %>% 
@@ -397,12 +416,15 @@ histogram(s$age,main="Housing Age Histogram",breaks=40,col = c("grey50"))
 
 ```
 
-The age now is a numeric variable, which doesn’t correlate strongly with the price. To transform them into categorical variables, we want to identify the different ranges to categorize the age variable, so we make this histogram. Based on the age histogram, we decide to categorize the age into four ranges in “age.cat” variable:
+The age now is a numeric variable, which doesn't correlate strongly with
+the price. To transform them into categorical variables, we want to
+identify the different ranges to categorize the age variable, so we make
+this histogram. Based on the age histogram, we decide to categorize the
+age into four ranges in "age.cat" variable:
 
-age >= 0 & age <15  ~ "Up to 15yrs",
-age >= 15 & age < 50  ~ "15-50yrs",
-age >= 50 & age < 75  ~ "50-75yrs",                   
-age >= 75  ~ "75+yrs"
+age \>= 0 & age \<15 \~ "Up to 15yrs", age \>= 15 & age \< 50 \~
+"15-50yrs", age \>= 50 & age \< 75 \~ "50-75yrs",\
+age \>= 75 \~ "75+yrs"
 
 ```{r}
 salegroup <- 
@@ -416,13 +438,13 @@ salegroup <-
 
 ### Story Height
 
-We think it might be helpful to recategorize the story height class. So we use “recode” to get the “story.cat” variable of 5 class:
+We think it might be helpful to recategorize the story height class. So
+we use "recode" to get the "story.cat" variable of 5 class:
 
-"1.0 STORY"= "1story","1 STORY"= "1story"
-"1.5 STORY" = "2story", "2.0 STORY" = "2story","BI-LEVEL"="2story","SPLIT LEVEL"="2story"
-"2.5 STORY"="3story","3.0 STORY"="3story"
-"CAPE COD"="other","RANCH W/BSMT"="other"
-">=4story "
+"1.0 STORY"= "1story","1 STORY"= "1story" "1.5 STORY" = "2story", "2.0
+STORY" = "2story","BI-LEVEL"="2story","SPLIT LEVEL"="2story" "2.5
+STORY"="3story","3.0 STORY"="3story" "CAPE COD"="other","RANCH
+W/BSMT"="other" "\>=4story"
 
 ```{r,results='hide'}
 glimpse(s$storyheigh)
@@ -432,15 +454,21 @@ salegroup$story.cat <- recode(salegroup$storyheigh,"1.0 STORY"= "1story","1 STOR
 
 ```
 
-##  Spatial Factors
+## Spatial Factors
 
 ### Census Tract
 
-To take spatial clustering into consideration, we then use census tract data and neighborhood effect as the spatial factors to help the model better understand the spatial clustering.
+To take spatial clustering into consideration, we then use census tract
+data and neighborhood effect as the spatial factors to help the model
+better understand the spatial clustering.
 
-By importing the census tract data, we collect the total population, white population, female bachelors, male bachelors, median income, median rent, total poverty.
+By importing the census tract data, we collect the total population,
+white population, female bachelors, male bachelors, median income,
+median rent, total poverty.
 
-We then calculate the variables of white population percentage, bachelor percentage, poverty percentage to make it easier to do the comparison among census tracts.
+We then calculate the variables of white population percentage, bachelor
+percentage, poverty percentage to make it easier to do the comparison
+among census tracts.
 
 ```{r, results='hide'}
 census_api_key("a78f5d0c0fd577cd3f16136b5a87d6ecdb62ffba", overwrite = TRUE)
@@ -504,13 +532,8 @@ grid.arrange(A2,A3, nrow = 1)
 
 So following is the spatial variables for our model:
 
--White percentage 
--Bachelor percentage
--Poverty percentage 
--Median income
--Median rent
-
-
+-White percentage -Bachelor percentage -Poverty percentage -Median
+income -Median rent
 
 ```{r}
 salegroup<-st_intersection(salegroup,tracts)
@@ -521,25 +544,23 @@ salegroup<-st_intersection(salegroup,tracts)
 salegroup<-st_intersection(salegroup,Mecklenberg)
 ```
 
-
-
 ## Table of summary statistics
-
 
 ```{r}
 stargazer(as.data.frame(salegroup[c("price","heatedarea","bedrooms","fullbaths","halfbaths","numfirepla","foundation","heatedfuel","actype","units","accounttyp","shape_Area")]), type="text", 
           title="Internal Characteristics", digits=1)
 ```
+
 ```{r}
 stargazer(as.data.frame(salegroup[c("park_nn1","homelessshelter_nn1","landfill","flood100y","school_nn1","bus_nn1","station_nn1")]), type="text", 
           title="Amenities/public Services", digits=1)
 ```
 
-
 ```{r}
 stargazer(as.data.frame(salegroup[c("TotalPop","pctWhite","pctBachelors","pctPoverty", "MedHHInc")]), type="text", 
           title="Spatial Structure", digits=1)
 ```
+
 ```{r}
 salegroup_challenge <- salegroup %>%
   filter (salegroup$toPredict == "CHALLENGE")
@@ -550,7 +571,8 @@ salegroup <- salegroup %>%
 
 ## Home Price Correlation Scatter Plots
 
-To understand how some of the continuous variables correlate with housing price, we get the correlation scatter plots.
+To understand how some of the continuous variables correlate with
+housing price, we get the correlation scatter plots.
 
 ```{r}
 st_drop_geometry(salegroup) %>% 
@@ -565,14 +587,21 @@ st_drop_geometry(salegroup) %>%
      plotTheme()
 ```
 
-For the 100 year flood and landfill, it makes sense that the further distance to landfills the higher housing price will be and but it is strange to see that the houses in floodplain have slightly higher price.
+For the 100 year flood and landfill, it makes sense that the further
+distance to landfills the higher housing price will be and but it is
+strange to see that the houses in floodplain have slightly higher price.
 
-For the park, the scatter plot shows that the closer to the parks, the more expensive the houses would be, which proves that parks could be an attractive public amenity. It is also not surprising that median income of census tract has high correlation with housing price spatially. 
-
+For the park, the scatter plot shows that the closer to the parks, the
+more expensive the houses would be, which proves that parks could be an
+attractive public amenity. It is also not surprising that median income
+of census tract has high correlation with housing price spatially.
 
 ## Correlation Matrix
 
-Correlation matrix is produced to see the relationship between the continuous variables.Three separate correlation matrix are made for each part of our variables. To further simplify the correlation plot, only one variable is kept for each amenity.
+Correlation matrix is produced to see the relationship between the
+continuous variables.Three separate correlation matrix are made for each
+part of our variables. To further simplify the correlation plot, only
+one variable is kept for each amenity.
 
 ```{r}
 numericVars <- 
@@ -587,6 +616,7 @@ ggcorrplot(
   insig = "blank") +  
     labs(title = "Correlation across numeric variables: Internal Characteristics") 
 ```
+
 ```{r}
 numericVars <- 
   select_if(st_drop_geometry(salegroup), is.numeric) %>% na.omit()%>%
@@ -600,6 +630,7 @@ ggcorrplot(
   insig = "blank") +  
     labs(title = "Correlation across numeric variables: External Amenities") 
 ```
+
 ```{r}
 numericVars <- 
   select_if(st_drop_geometry(salegroup), is.numeric) %>% na.omit()%>%
@@ -614,32 +645,36 @@ ggcorrplot(
     labs(title = "Correlation across numeric variables: Census Tract data") 
 ```
 
-
 # Methods
 
-After data wrangling and feature engineering, we build our regression model. Linear Regression, or Ordinary Least Squares Regression (OLS), is used to predict the price of a house as a function of several components. 
+After data wrangling and feature engineering, we build our regression
+model. Linear Regression, or Ordinary Least Squares Regression (OLS), is
+used to predict the price of a house as a function of several
+components.
 
-In the result of a regression model, the p-value is a direct way to measure if the coefficient is reliable and is a standard measure of statistical significance. (Adjusted) R^2  is a standard regression ‘goodness of fit’ indicator that describes how well the features explain the outcome. 
+In the result of a regression model, the p-value is a direct way to
+measure if the coefficient is reliable and is a standard measure of
+statistical significance. (Adjusted) R\^2 is a standard regression
+'goodness of fit' indicator that describes how well the features explain
+the outcome.
 
-For this project, we attempted to maximize our model’s generalizability. We randomly split our data into training and stretching sets to test our models' generalizability. Then we performed regressions, adding one dependent variable at a time and determining whether the model's mean absolute error (MAE) and R^2 went up or down.
-
+For this project, we attempted to maximize our model's generalizability.
+We randomly split our data into training and stretching sets to test our
+models' generalizability. Then we performed regressions, adding one
+dependent variable at a time and determining whether the model's mean
+absolute error (MAE) and R\^2 went up or down.
 
 # Results
 
-
 ## Split dataframe into training and testing datasets
-Below, after selecting all the "MODELLING" data from our dataset,salegroup was split into a 60% Mecklenberg.training dataset and a 40% Mecklenberg.test dataset, with control to include all levels of categorical variables (storyheigh, age.cat, heatedfuel, actype, etc.).
+
+Below, after selecting all the "MODELLING" data from our
+dataset,salegroup was split into a 60% Mecklenberg.training dataset and
+a 40% Mecklenberg.test dataset, with control to include all levels of
+categorical variables (storyheigh, age.cat, heatedfuel, actype, etc.).
 
 ```{r}
-salegroup_challenge <- salegroup %>%
-  filter (salegroup$toPredict == "CHALLENGE")
-salegroup <- salegroup %>%
-  filter (salegroup$toPredict == "MODELLING")
-
-```
-
-
-```{r}
+set.seed(5)
 inTrain <- createDataPartition(
               y = paste(salegroup$storyheigh,salegroup$age.cat,salegroup$heatedfuel, salegroup$actype,salegroup$foundation,salegroup$accounttyp), 
               p = .60, list = FALSE)
@@ -648,20 +683,22 @@ Mecklenberg.test <- salegroup[-inTrain,]
 ```
 
 ## training set regression
-The output below is a summary of our model. 
+
+The output below is a summary of our model. The summary of r-squared and adjusted r-squared for the training sample is also demonstrated below. Generally, about 68% of the variance of the dependent variable is explained in this prediction.
+
 ```{r}
 reg.training <- lm(price ~ ., data = st_drop_geometry(Mecklenberg.training) %>% 
                                  dplyr::select(price, heatedarea, bedrooms, 
                                                age.cat,storyheigh,fullbaths, halfbaths,
                                                numfirepla,foundation,heatedfuel,units,accounttyp, park_nn1,homelessshelter_nn1,landfill,flood100y,school_nn1,bus_nn1,station_nn1,bldggrade,
-                                               TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc,shape_Area))
+                                               TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc,zip,shape_Area))
 
-stargazer(reg.training, type="text", digits=1)
+stargazer(reg.training, type="text", digits=3)
 ```
 
-
 ## Test Set
-Our test set 
+
+In this test set, the mean absolute error is 112144, while the Mean Absolute Percent Error is about 28%.
 
 ```{r}
 Mecklenberg.test <-
@@ -683,7 +720,6 @@ data.frame(Mean_Absolute_Error = mean(Mecklenberg.test$SalePrice.AbsError, na.rm
   kable_styling() 
 ```
 
-
 ```{r}
 ggplot() +
   geom_sf(data=Mecklenberg,fill = "grey40", color = "grey10",size= 0.7)+
@@ -698,6 +734,7 @@ ggplot() +
 
 ## Cross validation
 
+
 ```{r}
 fitControl <- trainControl(method = "cv", number = 100)
 set.seed(825)
@@ -707,13 +744,11 @@ reg.cv <-
                                 dplyr::select(price, heatedarea, bedrooms, 
                                                age.cat,storyheigh,fullbaths,halfbaths,
                                                numfirepla,foundation,heatedfuel,units,accounttyp, park_nn1,homelessshelter_nn1,landfill,flood100y,school_nn1,bus_nn1,station_nn1,bldggrade,
-                                               TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc,shape_Area), 
+                                               TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc,zip,shape_Area), 
      method = "lm", trControl = fitControl, na.action = na.pass)
 
 reg.cv
 ```
-
-
 
 ```{r goodness_metrics, message = FALSE, warning = FALSE}
 dplyr::select(reg.cv$resample, -Resample) %>%
@@ -729,8 +764,61 @@ dplyr::select(reg.cv$resample, -Resample) %>%
 
 ```
 
-## Spatial Correlation of error
+## Map of Predicted Values
 
+```{r}
+CHALLENGE <-
+  salegroup_challenge %>%
+  mutate(Regression = "Neighborhood Effects",
+         SalePrice.Predict = predict(reg.training, salegroup_challenge),
+        )%>%
+  rename(prediction = SalePrice.Predict)
+
+
+MODELLING <-
+  salegroup %>%
+  mutate(Regression = "Neighborhood Effects",
+         SalePrice.Predict = predict(reg.training, salegroup),
+        )%>%
+  rename(prediction = SalePrice.Predict)
+
+TOTAL <- rbind(CHALLENGE, MODELLING )
+  
+```
+
+```{r}
+ggplot() +
+  geom_sf(data=Mecklenberg,fill = "grey40", color = "grey10",size= 0.7)+
+  geom_sf(data = TOTAL, aes(colour = q5(as.numeric(prediction))), 
+          show.legend = "point", size = .75) +
+  scale_colour_manual(values = palette5,
+                   labels=qBr(TOTAL,"prediction"),
+                   name="Quintile\nBreaks") +
+  labs(title="Home Price prediction, Mecklenburg")
+
+```
+
+## Predicted Prices as a Function of Observed Prices
+As we analyze the test set which occupied 40% of the total set, the prediction model still has some inaccuracy. The graphic below shows the sale price compared with the price prediction.
+
+```{r}
+Mecklenberg.test %>%
+  dplyr::select(SalePrice.Predict, price) %>%
+    ggplot(aes(price, SalePrice.Predict)) +
+  geom_point() +
+  stat_smooth(aes(price, price), 
+             method = "lm", se = FALSE, size = 1, colour="#FA7800") + 
+  stat_smooth(aes(SalePrice.Predict, price), 
+              method = "lm", se = FALSE, size = 1, colour="#25CB10") +
+  labs(title="Predicted sale price as a function of observed price",
+       subtitle="Orange line represents a perfect prediction; Green line represents prediction") +
+  plotTheme()
+
+
+```
+
+## Spatial Correlation of error
+The plots show that as the price increases, so does the price of nearby houses. This is substantial evidence for the clustering of home prices. As home price errors increase, nearby home price errors decrease. 
 ```{r}
 coords.test <- st_coordinates(Mecklenberg.test) 
 
@@ -770,6 +858,7 @@ ggplot(Mecklenberg.test, aes(x=lagPriceError, y=price)) +
 ```
 
 ## Moran's
+The frequency of all 999 randomly permutated I are plotted as a histogram with the Observed I indicated by the orange line. That the observed I is higher than all of the 999 randomly generated I’s provides visual confirmation of spatial autocorrelation. 
 
 ```{r}
 moranTest <- moran.mc(Mecklenberg.test$SalePrice.Error, 
@@ -803,97 +892,47 @@ left_join(
       kable() %>% kable_styling()
 ```
 
-```{r}
-reg.nhood <- lm(price ~ ., data = as.data.frame(Mecklenberg.training) %>% 
-                                 dplyr::select(zip, price, heatedarea, bedrooms, 
-                                               age.cat,storyheigh,fullbaths,halfbaths,
-                                               numfirepla,foundation,heatedfuel,units,accounttyp, park_nn1,homelessshelter_nn1,landfill,flood100y,school_nn1,bus_nn1,station_nn1,bldggrade,
-                                               TotalPop,pctWhite,pctBachelors,pctPoverty,MedHHInc,shape_Area))
-
-Mecklenberg.test.nhood <-
-  Mecklenberg.test %>%
-  mutate(Regression = "Neighborhood Effects",
-         SalePrice.Predict = predict(reg.nhood, Mecklenberg.test),
-         SalePrice.Error = SalePrice.Predict- price,
-         SalePrice.AbsError = abs(SalePrice.Predict- price),
-         SalePrice.APE = (abs(SalePrice.Predict- price)) / price)%>%
-  filter(price < 5000000)
-```
-
-```{r}
-summary(reg.nhood)
-```
-
 ## Accuracy of the neighborhood mode
-
-```{r}
-bothRegressions <- 
-  rbind(
-    dplyr::select(Mecklenberg.test, starts_with("price"), Regression, zip, SalePrice.Predict,SalePrice.Error,SalePrice.AbsError,SalePrice.APE) ,
-    dplyr::select(Mecklenberg.test.nhood, starts_with("price"), Regression, zip, SalePrice.Predict, SalePrice.Error,SalePrice.AbsError,SalePrice.APE))   
-```
-
-```{r}
-
-st_drop_geometry(bothRegressions) %>% 
-   mutate_if(is.numeric, ~ifelse(abs(.) == Inf,NA,.))%>% 
-  gather(Variable, Value, -Regression, -zip) %>%
-  filter(Variable == "SalePrice.AbsError" | Variable == "SalePrice.APE") %>%
-  group_by(Regression, Variable) %>%
-    summarize(meanValue = mean(Value, na.rm = T)) %>%
-    spread(Variable, meanValue) %>%
-    kable()
-```
-
-```{r}
-bothRegressions %>%
-  dplyr::select(SalePrice.Predict, price, Regression) %>%
-    ggplot(aes(price, SalePrice.Predict)) +
-  geom_point() +
-  stat_smooth(aes(price, price), 
-             method = "lm", se = FALSE, size = 1, colour="#FA7800") + 
-  stat_smooth(aes(SalePrice.Predict, price), 
-              method = "lm", se = FALSE, size = 1, colour="#25CB10") +
-  facet_wrap(~Regression) +
-  labs(title="Predicted sale price as a function of observed price",
-       subtitle="Orange line represents a perfect prediction; Green line represents prediction") +
-  plotTheme()
-
-
-```
+It is clear our model is relatively consistent across the neighborhoods. We can conclude that our model is generalizable. The single neighborhood that has super high sale prices should be treated as an outlier.
 
 ```{r}
   
-st_drop_geometry(bothRegressions) %>%
-  group_by(Regression, zip) %>%
+st_drop_geometry(Mecklenberg.test) %>%
+  group_by(zip) %>%
   summarize(mean.MAPE = mean(SalePrice.APE, na.rm = T)) %>%
   ungroup() %>% 
   left_join(Mecklenberg) %>%
     st_sf() %>%
     ggplot() + 
       geom_sf(aes(fill = mean.MAPE)) +
-      geom_sf(data = bothRegressions, colour = "black", size = .5) +
-      facet_wrap(~Regression) +
+      geom_sf(data = Mecklenberg.test, colour = "black", size = .5) +
       scale_fill_gradient(low = palette5[1], high = palette5[5],
                           name = "MAPE") +
       labs(title = "Mean test set MAPE by neighborhood") +
       mapTheme()
 ```
 
-```{r,include=FALSE}
-CHALLENGE <-
-  salegroup_challenge %>%
-  mutate(Regression = "Neighborhood Effects",
-         SalePrice.Predict = predict(reg.nhood, salegroup_challenge),
-        )%>%
-  st_drop_geometry%>%
-  rename(prediction = SalePrice.Predict)%>%
-subset(select=c("musaID","prediction"))
+```{r}
+Mecklenberg_sum <- Mecklenberg.test %>% 
+  group_by(zip) %>% 
+  summarise(meanMAPE = mean(SalePrice.APE),
+            meanPrice = mean(SalePrice.Predict))
 
-write.csv(CHALLENGE,"SY_group_prediction_2.csv", row.names = FALSE)
+
+ggplot(Mecklenberg_sum, aes(x = meanPrice, y = meanMAPE)) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "green") +
+  labs(title = "Scatter Plot - SalePrice/MAPE by neighborhood",
+       x = "Sale Price",
+       y = "MAPE") +
+  theme(
+    legend.position = "none"
+  )
 ```
 
 ## Generalizability by Income
+
+Finally, we calculated MAPE for below/above average home income to test the model's generalizability. The results indicate that our model has a slightly higher MAPE in high-income census tracts than in low-income ones, but very close. The model is generalizable.
 
 ```{r}
 mean(tracts$MedHHInc, na.rm = T)
@@ -909,28 +948,31 @@ ggplot() + geom_sf(data = na.omit(tracts), aes(fill = incomeContext)) +
     labs(title = "Income Context") +
     mapTheme() + theme(legend.position="bottom")
 ```
+
 ```{r}
-st_join(bothRegressions, tracts) %>% 
+st_join(Mecklenberg.test, tracts) %>% 
   filter(!is.na(incomeContext)) %>%
-  group_by(Regression, incomeContext) %>%
+  group_by(incomeContext) %>%
   summarize(mean.MAPE = scales::percent(mean(SalePrice.APE, na.rm = T))) %>%
   st_drop_geometry() %>%
   spread(incomeContext, mean.MAPE) %>%
   kable(caption = "Test set MAPE by neighborhood income context")
 ```
 
-
 # Discussion
 
-By thinking the variables of internal characteristics, external amenities and spatial factors and doing feature engineering, we build our sketch model. Considering the spatial lag could significantly increase the model accuracy and decrease our sale price APE.
+We build our sketch model by thinking about the variables of internal characteristics, external amenities, and spatial factors and doing feature engineering. Considering the neighborhood effect could significantly increase the model accuracy and decrease our sale price APE.
 
-However, our model is still not accurate enough to help Zillow to predict the housing price, since our MAE is around $95,800, which means a big gap between the predicted and real price.
+However, our model is still not accurate enough to help Zillow to predict the housing price, since our MAE is around $112,144, which means a big gap between the predicted and real price.
 
- It is interesting for us to learn that “units” is a critical variable to improve the model. For the external amenities, it is proved that the landfill facilities do negative impact on housing price and proximity to bus stops increase price as we thought. But it is also surprising for us to see some external variables like school, park and station don’t seem attractive to people and even have negative impact on housing price, which worth further study.
+It is interesting for us to learn that "units" is a critical variable to improve the model. For the external amenities, it is proved that the landfill facilities do negative impact on housing price and proximity to bus stops increase price as we thought. But it is also surprising for us to see some external variables like school, park and station don't seem attractive to people and even have negative impact on housing price, which worth further study.
 
 The barriers for us probably include not identifying some key internal characteristics variables and not having access to some external data like crime data and school district data, which we believe would improve our price prediction model a lot.
 
-
 # Conclusion
 
-Although some features in our model show strong correlation with the housing price, there is still a room to improve our model considering the MAE, MAPE and r-squared. We could consider inviting more data to improve the model. Also, non-linear models other OLS can be considered for better fit.
+Although some features in our model show strong correlation with the
+housing price, there is still a room to improve our model considering
+the MAE, MAPE and r-squared. We could consider inviting more data to
+improve the model. Also, non-linear models other OLS can be considered
+for better fit.
